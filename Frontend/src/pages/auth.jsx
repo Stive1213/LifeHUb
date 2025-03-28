@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 function Auth() {
-  const [isSignUp, setIsSignUp] = useState(true); // Toggle between Sign-Up and Login
-  const [isSignedUp, setIsSignedUp] = useState(false); // Track if user has signed up
+  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignedUp, setIsSignedUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [transactionScreenshot, setTransactionScreenshot] = useState(null); // Store uploaded screenshot
+  const [transactionScreenshot, setTransactionScreenshot] = useState(null);
   const [errors, setErrors] = useState({ email: '', password: '' });
+
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Validate form inputs
   const validateForm = () => {
@@ -47,8 +50,7 @@ function Auth() {
     e.preventDefault();
     if (validateForm()) {
       console.log('Logging in with email:', email, 'and password:', password);
-      // Simulate successful login (e.g., redirect to Dashboard)
-      window.location.href = '/dashboard'; // Replace with actual routing logic later
+      navigate('/dashboard'); // Navigate to Dashboard
     }
   };
 
@@ -68,8 +70,7 @@ function Auth() {
       return;
     }
     console.log('Payment verified with screenshot. Completing sign-up...');
-    // Simulate redirect to Dashboard after payment verification
-    window.location.href = '/dashboard'; // Replace with actual routing logic later
+    navigate('/dashboard'); // Navigate to Dashboard
   };
 
   return (
