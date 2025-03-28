@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import './App.css'
-
+import Side from './components/dashboared/Side'
 function App() {
   const [count, setCount] = useState(0)
 
   return (
     <>
-      <div className="bg-red-500 text-white p-4 text-center">
+      <div className=" text-white p-4 ">
         Hello World
+        <Side />
       </div>
+      
     </>
   )
 }
