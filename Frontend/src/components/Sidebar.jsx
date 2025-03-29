@@ -16,7 +16,10 @@ function Sidebar({ isOpen, toggleSidebar }) {
     else if (path === '/journal') setActivePage('Journal');
     else if (path === '/social-circle') setActivePage('Social Circle');
     else if (path === '/documents') setActivePage('Documents');
-    else if (path === '/quick-tools') setActivePage('Quick Tools'); // Highlight Quick Tools
+    else if (path === '/quick-tools') setActivePage('Quick Tools');
+    else if (path === '/community-hub') setActivePage('Community Hub');
+    else if (path === '/wellness') setActivePage('Wellness');
+    else if (path === '/assistant') setActivePage('Assistant'); // Highlight Assistant
   }, [location]);
 
   const navItems = [
@@ -29,7 +32,9 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Social Circle', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z', path: '/social-circle' },
     { name: 'Documents', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4z', path: '/documents' },
     { name: 'Quick Tools', icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', path: '/quick-tools' },
-    // ... other items ...
+    { name: 'Community Hub', icon: 'M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z', path: '/community-hub' },
+    { name: 'Wellness', icon: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z', path: '/wellness' },
+    { name: 'Assistant', icon: 'M9 17c0 .55-.45 1-1 1s-1-.45-1-1v-3H5c-.55 0-1-.45-1-1s.45-1 1-1h2v-3c0-.55.45-1 1-1s1 .45 1 1v3h2c.55 0 1 .45 1 1s-.45 1-1 1H9v3zm6-1c-.55 0-1-.45-1-1s.45-1 1-1h4c.55 0 1 .45 1 1s-.45 1-1 1h-4z', path: '/assistant' },
   ];
 
   const handleNavClick = (page, path) => {
@@ -72,12 +77,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
         ))}
       </nav>
       <div className="absolute bottom-4">
-        <button
-          onClick={handleGetTemplate}
-          className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600"
-        >
-          Get template
-        </button>
+        
       </div>
     </div>
   );

@@ -11,7 +11,10 @@ import Habits from './pages/Habits';
 import Journal from './pages/Journal';
 import SocialCircle from './pages/SocialCircle';
 import DocumentVault from './pages/DocumentVault';
-import QuickTools from './pages/QuickTools'; // Import the new page
+import QuickTools from './pages/QuickTools';
+import CommunityHub from './pages/CommunityHub';
+import MentalWellness from './pages/MentalWellness';
+import AIPoweredAssistant from './pages/AIPoweredAssistant'; // Import the new page
 import './App.css';
 
 function App() {
@@ -216,6 +219,69 @@ function App() {
                 />
                 <main className="flex-1 p-6">
                   <QuickTools />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Community Hub Route */}
+        <Route
+          path="/community-hub"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <CommunityHub />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Mental Wellness Route */}
+        <Route
+          path="/wellness"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <MentalWellness />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* AI-Powered Life Assistant Route */}
+        <Route
+          path="/assistant"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <AIPoweredAssistant />
                 </main>
               </div>
             </div>
