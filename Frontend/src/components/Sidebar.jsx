@@ -11,7 +11,8 @@ function Sidebar({ isOpen, toggleSidebar }) {
     if (path === '/dashboard') setActivePage('Dashboard');
     else if (path === '/tasks-goals') setActivePage('Tasks & Goals');
     else if (path === '/budget-tracker') setActivePage('Budget Tracker');
-    else if (path === '/calendar') setActivePage('Calendar'); // Highlight Calendar
+    else if (path === '/calendar') setActivePage('Calendar');
+    else if (path === '/habits') setActivePage('Habits'); // Highlight Habits
   }, [location]);
 
   const navItems = [
@@ -19,6 +20,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Tasks & Goals', icon: 'M5 13l4 4L19 7', path: '/tasks-goals' },
     { name: 'Budget Tracker', icon: 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z', path: '/budget-tracker' },
     { name: 'Calendar', icon: 'M6 2h12v4H6V2zm0 6h12v14H6V8zm2 2v10h8V10H8z', path: '/calendar' },
+    { name: 'Habits', icon: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z', path: '/habits' },
     // ... other items ...
   ];
 
