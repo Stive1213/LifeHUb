@@ -132,7 +132,7 @@ function TasksGoals() {
 
   return (
     <div className="text-white">
-      <h2 className="text-2xl font-bold mb-6">Tasks & Goals</h2>
+      <h2 className="text-2xl text-gray-400 font-bold mb-6">Tasks & Goals</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task Section */}
         <div className="bg-slate-800 p-6 rounded-lg shadow">

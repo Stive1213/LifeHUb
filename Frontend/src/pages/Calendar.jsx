@@ -127,7 +127,7 @@ function CalendarPage() {
     <div className="text-white flex">
       {/* Main Content */}
       <div className="flex-1">
-        <h2 className="text-2xl font-bold mb-6">Calendar & Event Planner</h2>
+        <h2 className="text-2xl text-gray-400 font-bold mb-6">Calendar & Event Planner</h2>
 
         {/* Calendar View */}
         <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">

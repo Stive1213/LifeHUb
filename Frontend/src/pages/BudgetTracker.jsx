@@ -110,7 +110,7 @@ function BudgetTracker() {
   return (
     <div className="text-white">
       {/* Header */}
-      <h2 className="text-2xl font-bold mb-6">Budget Tracker</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-400">Budget Tracker</h2>
 
       {/* Input Form */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">

@@ -205,7 +205,7 @@ function Habits() {
   return (
     <div className="text-white">
       {/* Header */}
-      <h2 className="text-2xl font-bold mb-6">Habit Builder</h2>
+      <h2 className="text-2xl text-gray-400 font-bold mb-6">Habit Builder</h2>
 
       {/* Add Habit Form */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
