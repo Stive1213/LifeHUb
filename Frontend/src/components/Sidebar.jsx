@@ -14,7 +14,8 @@ function Sidebar({ isOpen, toggleSidebar }) {
     else if (path === '/calendar') setActivePage('Calendar');
     else if (path === '/habits') setActivePage('Habits');
     else if (path === '/journal') setActivePage('Journal');
-    else if (path === '/social-circle') setActivePage('Social Circle'); // Highlight Social Circle
+    else if (path === '/social-circle') setActivePage('Social Circle');
+    else if (path === '/documents') setActivePage('Documents'); // Highlight Documents
   }, [location]);
 
   const navItems = [
@@ -25,6 +26,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Habits', icon: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z', path: '/habits' },
     { name: 'Journal', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z', path: '/journal' },
     { name: 'Social Circle', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z', path: '/social-circle' },
+    { name: 'Documents', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4z', path: '/documents' },
     // ... other items ...
   ];
 

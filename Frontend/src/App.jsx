@@ -8,7 +8,9 @@ import TasksGoals from './pages/TasksGoals';
 import BudgetTracker from './pages/BudgetTracker';
 import CalendarPage from './pages/Calendar';
 import Habits from './pages/Habits';
-import Journal from './pages/Journal'; // Import the new page
+import Journal from './pages/Journal';
+import SocialCircle from './pages/SocialCircle';
+import DocumentVault from './pages/DocumentVault'; // Import the new page
 import './App.css';
 
 function App() {
@@ -150,6 +152,48 @@ function App() {
                 />
                 <main className="flex-1 p-6">
                   <Journal />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Social Circle Route */}
+        <Route
+          path="/social-circle"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <SocialCircle />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Document Vault Route */}
+        <Route
+          path="/documents"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <DocumentVault />
                 </main>
               </div>
             </div>
