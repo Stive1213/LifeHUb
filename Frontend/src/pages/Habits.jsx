@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, CategoryScale, Tooltip, Legend } from 'chart.js';
+
+// Register Chart.js components for line graph
+ChartJS.register(LineElement, PointElement, LinearScale, Title, CategoryScale, Tooltip, Legend);
 
 function Habits() {
   // Mock data for habits
@@ -31,6 +36,9 @@ function Habits() {
     frequency: 'Daily',
   });
 
+  // State for selected habit to display in the graph
+  const [selectedHabitId, setSelectedHabitId] = useState(habits.length > 0 ? habits[0].id : '');
+
   // Current date (March 29, 2025)
   const currentDate = '2025-03-29';
 
@@ -51,6 +59,10 @@ function Habits() {
     };
     console.log('Habit added:', habit);
     setHabits([...habits, habit]);
+    // If this is the first habit, set it as the selected habit for the graph
+    if (habits.length === 0) {
+      setSelectedHabitId(habit.id);
+    }
     setNewHabit({ name: '', frequency: 'Daily' });
   };
 
@@ -120,6 +132,74 @@ function Habits() {
         ? Math.round((totalCompletions / totalPossibleCompletions) * 100)
         : 0;
     return `Completed ${completionPercentage}% this week`;
+  };
+
+  // Prepare data for the line graph
+  const getGraphData = () => {
+    const selectedHabit = habits.find((habit) => habit.id === selectedHabitId);
+    if (!selectedHabit) return { labels: [], datasets: [] };
+
+    // Last 7 days (March 23–29)
+    const labels = [];
+    const data = [];
+    const startDate = new Date(currentDate);
+    startDate.setDate(startDate.getDate() - 6); // Start from March 23
+
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startDate);
+      day.setDate(startDate.getDate() + i);
+      const dateString = day.toISOString().split('T')[0];
+      labels.push(day.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
+      data.push(selectedHabit.completionHistory.includes(dateString) ? 1 : 0);
+    }
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: `${selectedHabit.name} Progress`,
+          data,
+          fill: false,
+          borderColor: '#8b5cf6', // Purple line
+          backgroundColor: '#8b5cf6',
+          tension: 0.1,
+        },
+      ],
+    };
+  };
+
+  // Graph options to customize appearance
+  const graphOptions = {
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 1,
+        ticks: {
+          stepSize: 1,
+          callback: (value) => (value === 1 ? 'Completed' : 'Not Completed'),
+          color: '#d1d5db', // Gray text
+        },
+        grid: {
+          color: '#334155', // Slate grid lines
+        },
+      },
+      x: {
+        ticks: {
+          color: '#d1d5db', // Gray text
+        },
+        grid: {
+          color: '#334155', // Slate grid lines
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: '#d1d5db', // Gray legend text
+        },
+      },
+    },
+    maintainAspectRatio: false,
   };
 
   return (
@@ -210,7 +290,35 @@ function Habits() {
       {/* History */}
       <div className="bg-slate-800 p-6 rounded-lg shadow">
         <h3 className="text-xl font-bold mb-4">History</h3>
-        <p className="text-gray-400">{getWeeklySummary()}</p>
+        <p className="text-gray-400 mb-4">{getWeeklySummary()}</p>
+
+        {/* Habit Progress Graph */}
+        {habits.length > 0 ? (
+          <div>
+            <div className="mb-4">
+              <label htmlFor="habit-select" className="block text-sm text-gray-400 mb-2">
+                Select Habit to View Progress
+              </label>
+              <select
+                id="habit-select"
+                value={selectedHabitId}
+                onChange={(e) => setSelectedHabitId(e.target.value)}
+                className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
+              >
+                {habits.map((habit) => (
+                  <option key={habit.id} value={habit.id}>
+                    {habit.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="h-64">
+              <Line data={getGraphData()} options={graphOptions} />
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-400">Add habits to view progress.</p>
+        )}
       </div>
     </div>
   );
