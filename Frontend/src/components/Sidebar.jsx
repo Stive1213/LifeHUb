@@ -10,13 +10,15 @@ function Sidebar({ isOpen, toggleSidebar }) {
     const path = location.pathname;
     if (path === '/dashboard') setActivePage('Dashboard');
     else if (path === '/tasks-goals') setActivePage('Tasks & Goals');
-    else if (path === '/budget-tracker') setActivePage('Budget Tracker'); // Highlight Budget Tracker
+    else if (path === '/budget-tracker') setActivePage('Budget Tracker');
+    else if (path === '/calendar') setActivePage('Calendar'); // Highlight Calendar
   }, [location]);
 
   const navItems = [
     { name: 'Dashboard', icon: 'M3 12h18M3 6h18M3 18h18', path: '/dashboard' },
     { name: 'Tasks & Goals', icon: 'M5 13l4 4L19 7', path: '/tasks-goals' },
     { name: 'Budget Tracker', icon: 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z', path: '/budget-tracker' },
+    { name: 'Calendar', icon: 'M6 2h12v4H6V2zm0 6h12v14H6V8zm2 2v10h8V10H8z', path: '/calendar' },
     // ... other items ...
   ];
 

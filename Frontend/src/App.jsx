@@ -5,7 +5,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Auth from './pages/Auth';
 import TasksGoals from './pages/TasksGoals';
-import BudgetTracker from './pages/BudgetTracker'; // Import the new page
+import BudgetTracker from './pages/BudgetTracker';
+import CalendarPage from './pages/Calendar'; // Import the new page
 import './App.css';
 
 function App() {
@@ -84,6 +85,27 @@ function App() {
                 />
                 <main className="flex-1 p-6">
                   <BudgetTracker />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Calendar Route */}
+        <Route
+          path="/calendar"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <CalendarPage />
                 </main>
               </div>
             </div>

@@ -4,3 +4,45 @@
 .widget-card:hover {
   transform: translateY(-2px);
 }
+.gradient-bg {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* Custom styles for react-calendar */
+.react-calendar {
+  background: #1e293b !important;
+  border: none !important;
+  color: white !important;
+}
+
+.react-calendar__tile {
+  color: white !important;
+  background: #1e293b !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+}
+
+.react-calendar__tile--active,
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background: #8b5cf6 !important; /* Purple accent */
+  color: white !important;
+}
+
+.react-calendar__tile--now {
+  background: #334155 !important; /* Slightly lighter for today */
+}
+
+.react-calendar__navigation button {
+  color: white !important;
+  background: none !important;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background: #334155 !important;
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  color: #9ca3af !important; /* Gray for weekday labels */
+}
