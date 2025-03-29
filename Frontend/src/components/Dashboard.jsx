@@ -27,8 +27,8 @@ function Dashboard() {
   return (
     <div className="text-white">
       {/* Welcome Message */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Welcome back, John!</h2>
+      <div className="mb-6"> 
+        <h2 className="text-2xl font-bold  text-gray-400">Welcome back, John!</h2>
         <p className="text-sm text-gray-400">Manage your tasks, budget, and more</p>
       </div>
 

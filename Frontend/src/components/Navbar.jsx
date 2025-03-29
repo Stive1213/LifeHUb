@@ -35,7 +35,7 @@ function Navbar({ toggleSidebar, toggleTheme, theme }) {
   
         {/* Right: Welcome, Theme Toggle, and Actions */}
         <div className="flex items-center space-x-4">
-          <p className="text-sm">Welcome back, John!</p>
+          <p className="text-sm text-gray-500">Welcome back, John!</p>
           <button onClick={toggleTheme}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
