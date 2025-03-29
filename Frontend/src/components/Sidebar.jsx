@@ -15,7 +15,8 @@ function Sidebar({ isOpen, toggleSidebar }) {
     else if (path === '/habits') setActivePage('Habits');
     else if (path === '/journal') setActivePage('Journal');
     else if (path === '/social-circle') setActivePage('Social Circle');
-    else if (path === '/documents') setActivePage('Documents'); // Highlight Documents
+    else if (path === '/documents') setActivePage('Documents');
+    else if (path === '/quick-tools') setActivePage('Quick Tools'); // Highlight Quick Tools
   }, [location]);
 
   const navItems = [
@@ -27,6 +28,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Journal', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z', path: '/journal' },
     { name: 'Social Circle', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z', path: '/social-circle' },
     { name: 'Documents', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4z', path: '/documents' },
+    { name: 'Quick Tools', icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', path: '/quick-tools' },
     // ... other items ...
   ];
 

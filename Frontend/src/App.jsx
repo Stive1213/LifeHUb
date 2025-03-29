@@ -10,7 +10,8 @@ import CalendarPage from './pages/Calendar';
 import Habits from './pages/Habits';
 import Journal from './pages/Journal';
 import SocialCircle from './pages/SocialCircle';
-import DocumentVault from './pages/DocumentVault'; // Import the new page
+import DocumentVault from './pages/DocumentVault';
+import QuickTools from './pages/QuickTools'; // Import the new page
 import './App.css';
 
 function App() {
@@ -194,6 +195,27 @@ function App() {
                 />
                 <main className="flex-1 p-6">
                   <DocumentVault />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Quick Tools Route */}
+        <Route
+          path="/quick-tools"
+          element={
+            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className="flex-1 flex flex-col">
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <QuickTools />
                 </main>
               </div>
             </div>
