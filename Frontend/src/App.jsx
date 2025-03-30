@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import ProtectedRoute from './components/ProtectedRoute'; // Import ProtectedRoute
+import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './components/Dashboard';
 import Auth from './pages/Auth';
 import TasksGoals from './pages/TasksGoals';

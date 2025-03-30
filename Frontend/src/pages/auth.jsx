@@ -18,27 +18,21 @@ function Auth() {
     e.preventDefault();
     setError('');
 
-    // Validate input
     if (!email || !password) {
       setError('Email and password are required');
       return;
     }
 
     try {
-      // Determine the endpoint based on the auth mode
       const endpoint = isSignup ? '/signup' : '/login';
       const response = await axios.post(`http://localhost:5000/api/auth${endpoint}`, {
         email,
         password,
       });
 
-      // Store the JWT token in localStorage
       localStorage.setItem('token', response.data.token);
-
-      // Redirect to dashboard
       navigate('/dashboard');
     } catch (err) {
-      // Handle errors from the backend
       setError(err.response?.data?.error || 'Something went wrong');
     }
   };
