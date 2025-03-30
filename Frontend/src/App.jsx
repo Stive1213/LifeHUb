@@ -14,7 +14,10 @@ import DocumentVault from './pages/DocumentVault';
 import QuickTools from './pages/QuickTools';
 import CommunityHub from './pages/CommunityHub';
 import MentalWellness from './pages/MentalWellness';
-import AIPoweredAssistant from './pages/AIPoweredAssistant'; // Import the new page
+import AIPoweredAssistant from './pages/AIPoweredAssistant';
+import Gamification from './pages/Gamification';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings'; // Import the new page
 import './App.css';
 
 function App() {
@@ -40,9 +43,9 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -61,9 +64,9 @@ function App() {
         <Route
           path="/tasks-goals"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -82,9 +85,9 @@ function App() {
         <Route
           path="/budget-tracker"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -103,9 +106,9 @@ function App() {
         <Route
           path="/calendar"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -124,9 +127,9 @@ function App() {
         <Route
           path="/habits"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -145,9 +148,9 @@ function App() {
         <Route
           path="/journal"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -166,9 +169,9 @@ function App() {
         <Route
           path="/social-circle"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -187,9 +190,9 @@ function App() {
         <Route
           path="/documents"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -208,9 +211,9 @@ function App() {
         <Route
           path="/quick-tools"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -229,9 +232,9 @@ function App() {
         <Route
           path="/community-hub"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -250,9 +253,9 @@ function App() {
         <Route
           path="/wellness"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -271,9 +274,9 @@ function App() {
         <Route
           path="/assistant"
           element={
-            <div className={`flex min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-              <div className="flex-1 flex flex-col">
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 <Navbar
                   toggleSidebar={toggleSidebar}
                   toggleTheme={toggleTheme}
@@ -282,6 +285,69 @@ function App() {
                 />
                 <main className="flex-1 p-6">
                   <AIPoweredAssistant />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Gamification Route */}
+        <Route
+          path="/gamification"
+          element={
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <Gamification />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Profile Route */}
+        <Route
+          path="/profile"
+          element={
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <Profile />
+                </main>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Settings Route */}
+        <Route
+          path="/settings"
+          element={
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <Settings toggleTheme={toggleTheme} theme={theme} />
                 </main>
               </div>
             </div>
