@@ -16,6 +16,8 @@ import CommunityHub from './pages/CommunityHub';
 import MentalWellness from './pages/MentalWellness';
 import AIPoweredAssistant from './pages/AIPoweredAssistant';
 import Gamification from './pages/Gamification';
+import HealthWellness from './pages/HealthWellness';
+import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings'; // Import the new page
 import './App.css';
@@ -311,7 +313,45 @@ function App() {
             </div>
           }
         />
-
+        <Route
+          path="/HealthWellness"
+          element={
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <HealthWellness />
+                </main>
+              </div>
+            </div>
+          }
+        />
+         {/* Gamification Route */}
+         <Route
+          path="/Notifications"
+          element={
+            <div className={`min-h-screen ${theme === 'dark' ? 'gradient-bg' : 'bg-gray-100'}`}>
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              <div className={`flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+                <Navbar
+                  toggleSidebar={toggleSidebar}
+                  toggleTheme={toggleTheme}
+                  theme={theme}
+                  isSidebarOpen={isSidebarOpen}
+                />
+                <main className="flex-1 p-6">
+                  <Notifications />
+                </main>
+              </div>
+            </div>
+          }
+        />
         {/* Profile Route */}
         <Route
           path="/profile"
