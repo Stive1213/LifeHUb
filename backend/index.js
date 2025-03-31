@@ -56,6 +56,38 @@ db.run(`
     if (err) console.error('Error creating goals table:', err);
     else console.log('Goals table ready');
   });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category TEXT NOT NULL,
+      date TEXT NOT NULL,
+      description TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating transactions table:', err);
+    else console.log('Transactions table ready');
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      time TEXT NOT NULL,
+      inviteLink TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating events table:', err);
+    else console.log('Events table ready');
+  });
+
   const authenticateToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
     if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -175,6 +207,47 @@ app.get('/api/goals', authenticateToken, (req, res) => {
     );
   });
   
+// Get all transactions for the logged-in user
+app.get('/api/transactions', authenticateToken, (req, res) => {
+    db.all('SELECT * FROM transactions WHERE user_id = ?', [req.user.id], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    });
+  });
+  
+  // Add a new transaction
+  app.post('/api/transactions', authenticateToken, (req, res) => {
+    const { type, amount, category, date, description } = req.body;
+    db.run(
+      'INSERT INTO transactions (user_id, type, amount, category, date, description) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.id, type, amount, category, date, description || ''],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID, type, amount, category, date, description: description || '' });
+      }
+    );
+  });
+
+  // Get all events for the logged-in user
+app.get('/api/events', authenticateToken, (req, res) => {
+    db.all('SELECT * FROM events WHERE user_id = ?', [req.user.id], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    });
+  });
+  
+  // Add a new event
+  app.post('/api/events', authenticateToken, (req, res) => {
+    const { title, date, time, inviteLink } = req.body;
+    db.run(
+      'INSERT INTO events (user_id, title, date, time, inviteLink) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, title, date, time, inviteLink || ''],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID, title, date, time, inviteLink: inviteLink || '' });
+      }
+    );
+  });
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

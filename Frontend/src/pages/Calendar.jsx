@@ -1,36 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; // Import default styles
+import 'react-calendar/dist/Calendar.css';
+import axios from 'axios';
 
 function CalendarPage() {
-  // Mock data for events
-  const [events, setEvents] = useState([
-    {
-      id: '1',
-      title: 'Team Meeting',
-      date: '2025-03-30',
-      time: '14:00',
-      inviteLink: 'https://meet.example.com/team-meeting-123',
-    },
-    {
-      id: '2',
-      title: 'Team Lunch',
-      date: '2025-03-31',
-      time: '12:00',
-      inviteLink: 'https://meet.example.com/team-lunch-456',
-    },
-  ]);
-
-  // State for new event form
+  const [events, setEvents] = useState([]);
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
     time: '',
   });
+  const [view, setView] = useState('month');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [error, setError] = useState('');
 
-  // State for calendar view (monthly or weekly)
-  const [view, setView] = useState('month'); // 'month' or 'week'
-  const [selectedDate, setSelectedDate] = useState(new Date('2025-03-29')); // Current date
+  // Fetch events on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view events');
+      return;
+    }
+
+    axios
+      .get('http://localhost:5000/api/events', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setEvents(response.data))
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching events'));
+  }, []);
 
   // Handle form input changes
   const handleEventChange = (e) => {
@@ -44,18 +42,23 @@ function CalendarPage() {
   };
 
   // Handle adding a new event
-  const handleAddEvent = (e) => {
+  const handleAddEvent = async (e) => {
     e.preventDefault();
     if (!newEvent.title || !newEvent.date || !newEvent.time) return;
+    const token = localStorage.getItem('token');
     const inviteLink = `https://meet.example.com/${newEvent.title.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`;
-    const event = {
-      ...newEvent,
-      id: Date.now().toString(),
-      inviteLink,
-    };
-    console.log('Event added:', event);
-    setEvents([...events, event]);
-    setNewEvent({ title: '', date: '', time: '' });
+    const event = { ...newEvent, inviteLink };
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/events',
+        event,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEvents([...events, response.data]);
+      setNewEvent({ title: '', date: '', time: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding event');
+    }
   };
 
   // Filter events for the selected date (for monthly view) or week (for weekly view)
@@ -80,7 +83,7 @@ function CalendarPage() {
 
   // Get upcoming events for the event list
   const upcomingEvents = events
-    .filter((event) => new Date(event.date) >= new Date('2025-03-29'))
+    .filter((event) => new Date(event.date) >= new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // Custom tile content for the calendar to show events
@@ -90,7 +93,9 @@ function CalendarPage() {
     return dayEvents.length > 0 ? (
       <div className="text-xs text-purple-400">
         {dayEvents.map((event) => (
-          <p key={event.id}>{event.title} - {event.time}</p>
+          <p key={event.id}>
+            {event.title} - {event.time}
+          </p>
         ))}
       </div>
     ) : null;
@@ -107,7 +112,9 @@ function CalendarPage() {
       const dayEvents = getEventsForDate(day);
       days.push(
         <div key={i} className="p-2 border border-gray-700">
-          <p className="font-bold">{day.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}</p>
+          <p className="font-bold">
+            {day.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
+          </p>
           {dayEvents.length > 0 ? (
             dayEvents.map((event) => (
               <p key={event.id} className="text-sm text-purple-400">
@@ -125,9 +132,9 @@ function CalendarPage() {
 
   return (
     <div className="text-white flex">
-      {/* Main Content */}
       <div className="flex-1">
         <h2 className="text-2xl text-gray-400 font-bold mb-6">Calendar & Event Planner</h2>
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
         {/* Calendar View */}
         <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
@@ -223,14 +230,14 @@ function CalendarPage() {
         </div>
       </div>
 
-      {/* Event List (Sidebar-style on the right) */}
+      {/* Event List */}
       <div className="w-80 bg-slate-800 p-6 rounded-lg shadow ml-6">
         <h3 className="text-xl font-bold mb-4">Upcoming Events</h3>
         {upcomingEvents.length > 0 ? (
           <ul className="space-y-4">
             {upcomingEvents.map((event) => {
               const eventDate = new Date(event.date);
-              const today = new Date('2025-03-29');
+              const today = new Date();
               const tomorrow = new Date(today);
               tomorrow.setDate(today.getDate() + 1);
               let dateLabel = eventDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -241,7 +248,9 @@ function CalendarPage() {
               }
               return (
                 <li key={event.id} className="bg-slate-700 p-4 rounded-lg">
-                  <p className="font-bold">{dateLabel}: {event.title}</p>
+                  <p className="font-bold">
+                    {dateLabel}: {event.title}
+                  </p>
                   <p className="text-sm text-gray-400">{event.time}</p>
                   <p className="text-sm text-purple-400">
                     <a href={event.inviteLink} target="_blank" rel="noopener noreferrer">

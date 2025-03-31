@@ -1,40 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import axios from 'axios';
 
-// Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 function BudgetTracker() {
-  // Mock data for transactions
-  const [transactions, setTransactions] = useState([
-    {
-      id: '1',
-      type: 'Income',
-      amount: 5000,
-      category: 'Salary',
-      date: '2025-03-01',
-      description: 'Monthly salary',
-    },
-    {
-      id: '2',
-      type: 'Expense',
-      amount: 1000,
-      category: 'Food',
-      date: '2025-03-15',
-      description: 'Grocery shopping',
-    },
-    {
-      id: '3',
-      type: 'Expense',
-      amount: 500,
-      category: 'Transport',
-      date: '2025-03-20',
-      description: 'Taxi fare',
-    },
-  ]);
-
-  // State for new transaction form
+  const [transactions, setTransactions] = useState([]);
   const [newTransaction, setNewTransaction] = useState({
     type: 'Income',
     amount: '',
@@ -42,6 +14,23 @@ function BudgetTracker() {
     date: '',
     description: '',
   });
+  const [error, setError] = useState('');
+
+  // Fetch transactions on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view transactions');
+      return;
+    }
+
+    axios
+      .get('http://localhost:5000/api/transactions', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setTransactions(response.data))
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching transactions'));
+  }, []);
 
   // Handle form input changes
   const handleTransactionChange = (e) => {
@@ -49,17 +38,25 @@ function BudgetTracker() {
   };
 
   // Handle adding a new transaction
-  const handleAddTransaction = (e) => {
+  const handleAddTransaction = async (e) => {
     e.preventDefault();
     if (!newTransaction.amount || !newTransaction.category || !newTransaction.date) return;
+    const token = localStorage.getItem('token');
     const transaction = {
       ...newTransaction,
-      id: Date.now().toString(),
       amount: parseFloat(newTransaction.amount),
     };
-    console.log('Transaction added:', transaction);
-    setTransactions([...transactions, transaction]);
-    setNewTransaction({ type: 'Income', amount: '', category: '', date: '', description: '' });
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/transactions',
+        transaction,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTransactions([...transactions, response.data]);
+      setNewTransaction({ type: 'Income', amount: '', category: '', date: '', description: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding transaction');
+    }
   };
 
   // Calculate summary
@@ -84,22 +81,8 @@ function BudgetTracker() {
     datasets: [
       {
         data: Object.values(expenseCategories),
-        backgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40',
-        ],
-        hoverBackgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40',
-        ],
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
       },
     ],
   };
@@ -109,8 +92,8 @@ function BudgetTracker() {
 
   return (
     <div className="text-white">
-      {/* Header */}
       <h2 className="text-2xl font-bold mb-6 text-gray-400">Budget Tracker</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {/* Input Form */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
