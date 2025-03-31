@@ -88,6 +88,21 @@ db.run(`
     else console.log('Events table ready');
   });
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS habits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      name TEXT NOT NULL,
+      frequency TEXT NOT NULL,
+      streak INTEGER DEFAULT 0,
+      completionHistory TEXT DEFAULT '[]',
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating habits table:', err);
+    else console.log('Habits table ready');
+  });
+  
   const authenticateToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
     if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -248,6 +263,47 @@ app.get('/api/events', authenticateToken, (req, res) => {
       }
     );
   });
+
+// Get all habits for the logged-in user
+app.get('/api/habits', authenticateToken, (req, res) => {
+    db.all('SELECT * FROM habits WHERE user_id = ?', [req.user.id], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      const habits = rows.map((habit) => ({
+        ...habit,
+        completionHistory: JSON.parse(habit.completionHistory || '[]'),
+      }));
+      res.json(habits);
+    });
+  });
+  
+  // Add a new habit
+  app.post('/api/habits', authenticateToken, (req, res) => {
+    const { name, frequency } = req.body;
+    const completionHistory = JSON.stringify([]);
+    db.run(
+      'INSERT INTO habits (user_id, name, frequency, streak, completionHistory) VALUES (?, ?, ?, 0, ?)',
+      [req.user.id, name, frequency, completionHistory],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID, name, frequency, streak: 0, completionHistory: [] });
+      }
+    );
+  });
+  
+  // Update a habit (e.g., toggle completion)
+  app.put('/api/habits/:id', authenticateToken, (req, res) => {
+    const { streak, completionHistory } = req.body;
+    const completionHistoryJson = JSON.stringify(completionHistory);
+    db.run(
+      'UPDATE habits SET streak = ?, completionHistory = ? WHERE id = ? AND user_id = ?',
+      [streak, completionHistoryJson, req.params.id, req.user.id],
+      function (err) {
+        if (err || this.changes === 0) return res.status(404).json({ error: 'Habit not found' });
+        res.json({ message: 'Habit updated' });
+      }
+    );
+  });
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
