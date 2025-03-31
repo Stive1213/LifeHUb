@@ -1,27 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 function TasksGoals() {
-  // Mock data for tasks
-  const [tasks, setTasks] = useState([
-    {
-      id: '1',
-      title: 'Finish project proposal',
-      deadline: '2025-03-28',
-      category: 'Work',
-      subtasks: ['Draft outline', 'Review with team'],
-      isDone: false,
-    },
-    {
-      id: '2',
-      title: 'Buy groceries',
-      deadline: '2025-03-27',
-      category: 'Home',
-      subtasks: ['Make list', 'Visit store'],
-      isDone: false,
-    },
-  ]);
-
-  // State for new task form
+  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState({
     title: '',
     deadline: '',
@@ -30,26 +11,7 @@ function TasksGoals() {
   });
   const [newSubtask, setNewSubtask] = useState('');
   const [filter, setFilter] = useState('All');
-
-  // Mock data for goals
-  const [goals, setGoals] = useState([
-    {
-      id: '1',
-      title: 'Save for vacation',
-      target: 'Save 5,000 ETB',
-      deadline: '2025-12-31',
-      progress: 20,
-    },
-    {
-      id: '2',
-      title: 'Run a marathon',
-      target: 'Train 5 days/week',
-      deadline: '2025-11-30',
-      progress: 50,
-    },
-  ]);
-
-  // State for new goal form
+  const [goals, setGoals] = useState([]);
   const [newGoal, setNewGoal] = useState({
     title: '',
     target: '',
@@ -57,6 +19,32 @@ function TasksGoals() {
     progress: 0,
   });
   const [editingGoal, setEditingGoal] = useState(null);
+  const [error, setError] = useState('');
+
+  // Fetch tasks and goals on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view tasks and goals');
+      return;
+    }
+
+    // Fetch tasks
+    axios
+      .get('http://localhost:5000/api/tasks', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setTasks(response.data))
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching tasks'));
+
+    // Fetch goals
+    axios
+      .get('http://localhost:5000/api/goals', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setGoals(response.data))
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching goals'));
+  }, []);
 
   // Handle Task Form
   const handleTaskChange = (e) => {
@@ -70,29 +58,48 @@ function TasksGoals() {
     }
   };
 
-  const handleAddTask = (e) => {
+  const handleAddTask = async (e) => {
     e.preventDefault();
     if (!newTask.title || !newTask.deadline) return;
-    const task = { ...newTask, id: Date.now().toString(), isDone: false };
-    console.log('Task added:', task);
-    setTasks([...tasks, task]);
-    setNewTask({ title: '', deadline: '', category: 'Work', subtasks: [] });
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/tasks',
+        { ...newTask, isDone: false },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks([...tasks, response.data]);
+      setNewTask({ title: '', deadline: '', category: 'Work', subtasks: [] });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding task');
+    }
   };
 
-  const toggleTaskDone = (taskId) => {
-    setTasks(tasks.map((task) => (task.id === taskId ? { ...task, isDone: !task.isDone } : task)));
+  const toggleTaskDone = async (taskId) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const token = localStorage.getItem('token');
+    try {
+      await axios.put(
+        `http://localhost:5000/api/tasks/${taskId}`,
+        { isDone: !task.isDone },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks(tasks.map((t) => (t.id === taskId ? { ...t, isDone: !t.isDone } : t)));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error updating task');
+    }
   };
 
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
-    const today = new Date('2025-03-28'); // Current date
+    const today = new Date(new Date()); // Replace with dynamic date later
     const deadline = new Date(task.deadline);
     if (filter === 'Due Today') {
       return deadline.toDateString() === today.toDateString();
     } else if (filter === 'Overdue') {
       return deadline < today && !task.isDone;
     }
-    return true; // All
+    return true;
   });
 
   // Handle Goal Form
@@ -105,34 +112,48 @@ function TasksGoals() {
     }
   };
 
-  const handleAddGoal = (e) => {
+  const handleAddGoal = async (e) => {
     e.preventDefault();
     if (!newGoal.title || !newGoal.target || !newGoal.deadline) return;
-    const goal = { ...newGoal, id: Date.now().toString(), progress: parseInt(newGoal.progress) || 0 };
-    console.log('Goal added:', goal);
-    setGoals([...goals, goal]);
-    setNewGoal({ title: '', target: '', deadline: '', progress: 0 });
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/goals',
+        { ...newGoal, progress: parseInt(newGoal.progress) || 0 },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setGoals([...goals, response.data]);
+      setNewGoal({ title: '', target: '', deadline: '', progress: 0 });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding goal');
+    }
   };
 
   const handleEditGoal = (goal) => {
     setEditingGoal(goal);
   };
 
-  const handleUpdateGoal = (e) => {
+  const handleUpdateGoal = async (e) => {
     e.preventDefault();
     if (!editingGoal.title || !editingGoal.target || !editingGoal.deadline) return;
-    console.log('Goal updated:', editingGoal);
-    setGoals(
-      goals.map((goal) =>
-        goal.id === editingGoal.id ? { ...editingGoal, progress: parseInt(editingGoal.progress) } : goal
-      )
-    );
-    setEditingGoal(null);
+    const token = localStorage.getItem('token');
+    try {
+      await axios.put(
+        `http://localhost:5000/api/goals/${editingGoal.id}`,
+        { ...editingGoal, progress: parseInt(editingGoal.progress) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setGoals(goals.map((g) => (g.id === editingGoal.id ? { ...editingGoal, progress: parseInt(editingGoal.progress) } : g)));
+      setEditingGoal(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error updating goal');
+    }
   };
 
   return (
     <div className="text-white">
       <h2 className="text-2xl text-gray-400 font-bold mb-6">Tasks & Goals</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task Section */}
         <div className="bg-slate-800 p-6 rounded-lg shadow">
@@ -220,9 +241,7 @@ function TasksGoals() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg ${
-                  filter === f ? 'bg-purple-500' : 'bg-slate-700'
-                } hover:bg-purple-600 transition-colors`}
+                className={`px-4 py-2 rounded-lg ${filter === f ? 'bg-purple-500' : 'bg-slate-700'} hover:bg-purple-600 transition-colors`}
               >
                 {f}
               </button>
