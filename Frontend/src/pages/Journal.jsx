@@ -1,36 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 function Journal() {
-  // Mock data for journal entries
-  const [entries, setEntries] = useState([
-    {
-      id: '1',
-      date: '2025-03-27',
-      text: 'Felt great today after a productive morning!',
-      mood: 'Happy',
-    },
-    {
-      id: '2',
-      date: '2025-03-26',
-      mood: 'Sad',
-      text: 'Had a tough day at work, feeling overwhelmed.',
-    },
-    {
-      id: '3',
-      date: '2025-03-25',
-      mood: 'Neutral',
-      text: 'Just an average day, nothing special.',
-    },
-  ]);
-
-  // State for new journal entry form
+  const [entries, setEntries] = useState([]);
   const [newEntry, setNewEntry] = useState({
     text: '',
     mood: 'Happy',
   });
+  const [error, setError] = useState('');
 
-  // Current date (March 29, 2025)
-  const currentDate = '2025-03-29';
+  // Current date (dynamic)
+  const currentDate = new Date().toISOString().split('T')[0];
 
   // Available moods with icons
   const moods = [
@@ -40,6 +20,22 @@ function Journal() {
     { name: 'Excited', icon: '🎉', color: 'text-yellow-400' },
     { name: 'Stressed', icon: '😓', color: 'text-red-400' },
   ];
+
+  // Fetch journal entries on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view journal entries');
+      return;
+    }
+
+    axios
+      .get('http://localhost:5000/api/journal', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setEntries(response.data))
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching journal entries'));
+  }, []);
 
   // Handle form input changes
   const handleEntryChange = (e) => {
@@ -52,27 +48,32 @@ function Journal() {
   };
 
   // Handle adding a new journal entry
-  const handleAddEntry = (e) => {
+  const handleAddEntry = async (e) => {
     e.preventDefault();
     if (!newEntry.text) return;
-    const entry = {
-      id: Date.now().toString(),
-      date: currentDate,
-      text: newEntry.text,
-      mood: newEntry.mood,
-    };
-    console.log('Entry added:', entry);
-    setEntries([entry, ...entries]); // Add to the top of the list
-    setNewEntry({ text: '', mood: 'Happy' });
+    const token = localStorage.getItem('token');
+    const entry = { date: currentDate, text: newEntry.text, mood: newEntry.mood };
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/journal',
+        entry,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEntries([response.data, ...entries]);
+      setNewEntry({ text: '', mood: 'Happy' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding journal entry');
+    }
   };
 
-  // Calculate mood summary for the current month (March 2025)
+  // Calculate mood summary for the current month
   const getMoodSummary = () => {
-    const marchEntries = entries.filter((entry) => entry.date.startsWith('2025-03'));
-    const totalEntries = marchEntries.length;
+    const currentMonth = currentDate.slice(0, 7); // e.g., "2025-03"
+    const monthEntries = entries.filter((entry) => entry.date.startsWith(currentMonth));
+    const totalEntries = monthEntries.length;
     if (totalEntries === 0) return 'No entries this month.';
 
-    const moodCounts = marchEntries.reduce((acc, entry) => {
+    const moodCounts = monthEntries.reduce((acc, entry) => {
       acc[entry.mood] = (acc[entry.mood] || 0) + 1;
       return acc;
     }, {});
@@ -89,8 +90,8 @@ function Journal() {
 
   return (
     <div className="text-white">
-      {/* Header */}
       <h2 className="text-2xl font-bold mb-6">Daily Journal</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {/* Entry Form */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">

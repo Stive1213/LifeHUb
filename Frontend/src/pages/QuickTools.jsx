@@ -21,34 +21,41 @@ function QuickTools() {
 
   // Mock weather data
   const mockWeatherData = {
-    'Addis Ababa': { temperature: '24°C', condition: 'Sunny' },
-    'New York': { temperature: '15°C', condition: 'Cloudy' },
-    'London': { temperature: '12°C', condition: 'Rainy' },
+    'addis ababa': { temperature: '24°C', condition: 'Sunny' },
+    'new york': { temperature: '15°C', condition: 'Cloudy' },
+    'london': { temperature: '12°C', condition: 'Rainy' },
   };
 
-  // Mock conversion rates
+  // Mock conversion rates (updated ETB to USD)
   const conversionRates = {
-    ETBtoUSD: 0.0083, // 1 ETB = 0.0083 USD
+    ETBtoUSD: 0.007142857, // 1 ETB = 1/140 USD (1 USD = 140 ETB)
     kmToMiles: 0.621371, // 1 km = 0.621371 miles
   };
 
   // Calculator functions
   const handleCalcInput = (value) => {
-    if (calcDisplay === '0') {
-      setCalcDisplay(value);
+    if (calcDisplay === '0' && value !== '.') {
+      setCalcDisplay(value); // Replace 0 with new number
+    } else if (value === '.' && calcDisplay.includes('.')) {
+      return; // Prevent multiple decimals
     } else {
-      setCalcDisplay(calcDisplay + value);
+      setCalcDisplay(calcDisplay + value); // Append to current display
     }
   };
 
   const handleCalcOperation = (operation) => {
-    setCalcFirstNum(parseFloat(calcDisplay));
-    setCalcOperation(operation);
-    setCalcDisplay('0');
+    if (calcFirstNum !== null && calcOperation) {
+      handleCalcResult(); // Chain calculation if there's a pending operation
+      setCalcOperation(operation); // Set new operation for next input
+    } else {
+      setCalcFirstNum(parseFloat(calcDisplay)); // Store first number
+      setCalcOperation(operation); // Set operation
+      setCalcDisplay('0'); // Reset display for second number
+    }
   };
 
   const handleCalcResult = () => {
-    if (!calcFirstNum || !calcOperation) return;
+    if (calcFirstNum === null || !calcOperation) return; // No operation pending
     const secondNum = parseFloat(calcDisplay);
     let result;
     switch (calcOperation) {
@@ -62,14 +69,14 @@ function QuickTools() {
         result = calcFirstNum * secondNum;
         break;
       case '÷':
-        result = calcFirstNum / secondNum;
+        result = secondNum === 0 ? 'Error' : calcFirstNum / secondNum;
         break;
       default:
         return;
     }
-    setCalcDisplay(result.toString());
-    setCalcFirstNum(null);
-    setCalcOperation(null);
+    setCalcDisplay(result === 'Error' ? 'Error' : result.toString());
+    setCalcFirstNum(result === 'Error' ? null : result); // Allow chaining if not error
+    setCalcOperation(null); // Reset operation
   };
 
   const handleCalcClear = () => {
@@ -81,8 +88,8 @@ function QuickTools() {
   // Unit Converter functions
   const handleConvert = () => {
     const value = parseFloat(convertValue);
-    if (isNaN(value)) {
-      setConvertResult('0');
+    if (isNaN(value) || convertValue === '') {
+      setConvertResult('');
       return;
     }
     let result;
@@ -96,18 +103,20 @@ function QuickTools() {
         setConvertResult(`${result} miles`);
         break;
       default:
-        setConvertResult('0');
+        setConvertResult('');
     }
   };
 
   // Weather Widget functions
   const handleFetchWeather = () => {
+    if (!city.trim()) {
+      setWeather({ temperature: 'N/A', condition: 'Enter a city' });
+      return;
+    }
     const cityKey = city.trim().toLowerCase();
-    const cityData = Object.keys(mockWeatherData).find(
-      (key) => key.toLowerCase() === cityKey
-    );
+    const cityData = mockWeatherData[cityKey];
     if (cityData) {
-      setWeather(mockWeatherData[cityData]);
+      setWeather(cityData);
     } else {
       setWeather({ temperature: 'N/A', condition: 'City not found' });
     }
@@ -129,10 +138,8 @@ function QuickTools() {
 
   return (
     <div className="text-white">
-      {/* Header */}
       <h2 className="text-2xl font-bold mb-6">Quick Tools Suite</h2>
 
-      {/* Tools Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Calculator */}
         <div className="bg-slate-800 p-6 rounded-lg shadow">
@@ -150,7 +157,7 @@ function QuickTools() {
               <button
                 key={btn}
                 onClick={() =>
-                  btn.match(/[0-9.]/) ? handleCalcInput(btn) : handleCalcOperation(btn)
+                  /[0-9.]/.test(btn) ? handleCalcInput(btn) : handleCalcOperation(btn)
                 }
                 className="p-3 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
               >
@@ -161,7 +168,7 @@ function QuickTools() {
               <button
                 key={btn}
                 onClick={() =>
-                  btn.match(/[0-9.]/) ? handleCalcInput(btn) : handleCalcOperation(btn)
+                  /[0-9.]/.test(btn) ? handleCalcInput(btn) : handleCalcOperation(btn)
                 }
                 className="p-3 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
               >
@@ -172,7 +179,7 @@ function QuickTools() {
               <button
                 key={btn}
                 onClick={() =>
-                  btn.match(/[0-9.]/) ? handleCalcInput(btn) : handleCalcOperation(btn)
+                  /[0-9.]/.test(btn) ? handleCalcInput(btn) : handleCalcOperation(btn)
                 }
                 className="p-3 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
               >
@@ -185,7 +192,7 @@ function QuickTools() {
                 onClick={() =>
                   btn === '='
                     ? handleCalcResult()
-                    : btn.match(/[0-9.]/)
+                    : /[0-9.]/.test(btn)
                     ? handleCalcInput(btn)
                     : handleCalcOperation(btn)
                 }
@@ -213,7 +220,10 @@ function QuickTools() {
             <select
               id="convert-type"
               value={convertType}
-              onChange={(e) => setConvertType(e.target.value)}
+              onChange={(e) => {
+                setConvertType(e.target.value);
+                handleConvert();
+              }}
               className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
             >
               <option value="ETBtoUSD">ETB to USD</option>
@@ -253,8 +263,9 @@ function QuickTools() {
               id="city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleFetchWeather()}
               className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
-              placeholder="Enter city"
+              placeholder="e.g., Addis Ababa"
             />
           </div>
           <button
@@ -283,6 +294,7 @@ function QuickTools() {
               id="options"
               value={options}
               onChange={(e) => setOptions(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handlePick()}
               className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
               placeholder="e.g., Injera, Pasta"
             />

@@ -103,6 +103,20 @@ db.run(`
     else console.log('Habits table ready');
   });
   
+  db.run(`
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      date TEXT NOT NULL,
+      text TEXT NOT NULL,
+      mood TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating journal_entries table:', err);
+    else console.log('Journal_entries table ready');
+  });
+
   const authenticateToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
     if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -303,7 +317,26 @@ app.get('/api/habits', authenticateToken, (req, res) => {
       }
     );
   });
-
+// Get all journal entries for the logged-in user
+app.get('/api/journal', authenticateToken, (req, res) => {
+    db.all('SELECT * FROM journal_entries WHERE user_id = ?', [req.user.id], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    });
+  });
+  
+  // Add a new journal entry
+  app.post('/api/journal', authenticateToken, (req, res) => {
+    const { date, text, mood } = req.body;
+    db.run(
+      'INSERT INTO journal_entries (user_id, date, text, mood) VALUES (?, ?, ?, ?)',
+      [req.user.id, date, text, mood],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID, date, text, mood });
+      }
+    );
+  });
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
