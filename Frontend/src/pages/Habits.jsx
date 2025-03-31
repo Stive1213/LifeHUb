@@ -1,46 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, CategoryScale, Tooltip, Legend } from 'chart.js';
+import axios from 'axios';
 
-// Register Chart.js components for line graph
 ChartJS.register(LineElement, PointElement, LinearScale, Title, CategoryScale, Tooltip, Legend);
 
 function Habits() {
-  // Mock data for habits
-  const [habits, setHabits] = useState([
-    {
-      id: '1',
-      name: 'Drink Water',
-      frequency: 'Daily',
-      streak: 5,
-      completionHistory: [
-        '2025-03-24',
-        '2025-03-25',
-        '2025-03-26',
-        '2025-03-27',
-        '2025-03-28',
-      ],
-    },
-    {
-      id: '2',
-      name: 'Read a Book',
-      frequency: 'Daily',
-      streak: 2,
-      completionHistory: ['2025-03-27', '2025-03-28'],
-    },
-  ]);
-
-  // State for new habit form
+  const [habits, setHabits] = useState([]);
   const [newHabit, setNewHabit] = useState({
     name: '',
     frequency: 'Daily',
   });
+  const [selectedHabitId, setSelectedHabitId] = useState('');
+  const [error, setError] = useState('');
 
-  // State for selected habit to display in the graph
-  const [selectedHabitId, setSelectedHabitId] = useState(habits.length > 0 ? habits[0].id : '');
+  // Current date (dynamic)
+  const currentDate = new Date().toISOString().split('T')[0];
 
-  // Current date (March 29, 2025)
-  const currentDate = '2025-03-29';
+  // Fetch habits on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view habits');
+      return;
+    }
+
+    axios
+      .get('http://localhost:5000/api/habits', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        setHabits(response.data);
+        if (response.data.length > 0 && !selectedHabitId) {
+          setSelectedHabitId(response.data[0].id);
+        }
+      })
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching habits'));
+  }, []);
 
   // Handle form input changes
   const handleHabitChange = (e) => {
@@ -48,72 +44,75 @@ function Habits() {
   };
 
   // Handle adding a new habit
-  const handleAddHabit = (e) => {
+  const handleAddHabit = async (e) => {
     e.preventDefault();
     if (!newHabit.name) return;
-    const habit = {
-      ...newHabit,
-      id: Date.now().toString(),
-      streak: 0,
-      completionHistory: [],
-    };
-    console.log('Habit added:', habit);
-    setHabits([...habits, habit]);
-    // If this is the first habit, set it as the selected habit for the graph
-    if (habits.length === 0) {
-      setSelectedHabitId(habit.id);
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/habits',
+        newHabit,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setHabits([...habits, response.data]);
+      if (habits.length === 0) {
+        setSelectedHabitId(response.data.id);
+      }
+      setNewHabit({ name: '', frequency: 'Daily' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding habit');
     }
-    setNewHabit({ name: '', frequency: 'Daily' });
   };
 
   // Handle marking a habit as done
-  const toggleHabitDone = (habitId) => {
-    setHabits(
-      habits.map((habit) => {
-        if (habit.id !== habitId) return habit;
+  const toggleHabitDone = async (habitId) => {
+    const token = localStorage.getItem('token');
+    const habit = habits.find((h) => h.id === habitId);
+    const isDoneToday = habit.completionHistory.includes(currentDate);
+    let newStreak = habit.streak;
+    let newCompletionHistory = [...habit.completionHistory];
 
-        const isDoneToday = habit.completionHistory.includes(currentDate);
-        let newStreak = habit.streak;
-        let newCompletionHistory = [...habit.completionHistory];
+    if (isDoneToday) {
+      // Unmark as done
+      newCompletionHistory = newCompletionHistory.filter((date) => date !== currentDate);
+      let streak = 0;
+      let tempDate = new Date(currentDate);
+      tempDate.setDate(tempDate.getDate() - 1);
+      while (newCompletionHistory.includes(tempDate.toISOString().split('T')[0])) {
+        streak++;
+        tempDate.setDate(tempDate.getDate() - 1);
+      }
+      newStreak = streak;
+    } else {
+      // Mark as done
+      newCompletionHistory.push(currentDate);
+      const yesterday = new Date(currentDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const wasDoneYesterday = habit.completionHistory.includes(yesterday.toISOString().split('T')[0]);
+      newStreak = wasDoneYesterday ? habit.streak + 1 : 1;
+    }
 
-        if (isDoneToday) {
-          // Unmark as done: Remove today's date and recalculate streak
-          newCompletionHistory = newCompletionHistory.filter((date) => date !== currentDate);
-          // Recalculate streak by finding the last consecutive sequence
-          let streak = 0;
-          let tempDate = new Date(currentDate);
-          tempDate.setDate(tempDate.getDate() - 1); // Start from yesterday
-          while (newCompletionHistory.includes(tempDate.toISOString().split('T')[0])) {
-            streak++;
-            tempDate.setDate(tempDate.getDate() - 1);
-          }
-          newStreak = streak;
-        } else {
-          // Mark as done: Add today's date and update streak
-          newCompletionHistory.push(currentDate);
-          // Check if the previous day was completed to continue the streak
-          const yesterday = new Date(currentDate);
-          yesterday.setDate(yesterday.getDate() - 1);
-          const wasDoneYesterday = habit.completionHistory.includes(
-            yesterday.toISOString().split('T')[0]
-          );
-          newStreak = wasDoneYesterday ? habit.streak + 1 : 1;
-        }
-
-        return {
-          ...habit,
-          streak: newStreak,
-          completionHistory: newCompletionHistory,
-        };
-      })
-    );
+    try {
+      await axios.put(
+        `http://localhost:5000/api/habits/${habitId}`,
+        { streak: newStreak, completionHistory: newCompletionHistory },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setHabits(
+        habits.map((h) =>
+          h.id === habitId ? { ...h, streak: newStreak, completionHistory: newCompletionHistory } : h
+        )
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error updating habit');
+    }
   };
 
   // Calculate weekly summary (last 7 days)
   const getWeeklySummary = () => {
     const startDate = new Date(currentDate);
-    startDate.setDate(startDate.getDate() - 6); // Last 7 days including today
-    const totalPossibleCompletions = habits.length * 7; // Total habits * 7 days
+    startDate.setDate(startDate.getDate() - 6);
+    const totalPossibleCompletions = habits.length * 7;
     let totalCompletions = 0;
 
     habits.forEach((habit) => {
@@ -139,11 +138,10 @@ function Habits() {
     const selectedHabit = habits.find((habit) => habit.id === selectedHabitId);
     if (!selectedHabit) return { labels: [], datasets: [] };
 
-    // Last 7 days (March 23–29)
     const labels = [];
     const data = [];
     const startDate = new Date(currentDate);
-    startDate.setDate(startDate.getDate() - 6); // Start from March 23
+    startDate.setDate(startDate.getDate() - 6);
 
     for (let i = 0; i < 7; i++) {
       const day = new Date(startDate);
@@ -160,7 +158,7 @@ function Habits() {
           label: `${selectedHabit.name} Progress`,
           data,
           fill: false,
-          borderColor: '#8b5cf6', // Purple line
+          borderColor: '#8b5cf6',
           backgroundColor: '#8b5cf6',
           tension: 0.1,
         },
@@ -168,7 +166,6 @@ function Habits() {
     };
   };
 
-  // Graph options to customize appearance
   const graphOptions = {
     scales: {
       y: {
@@ -177,35 +174,25 @@ function Habits() {
         ticks: {
           stepSize: 1,
           callback: (value) => (value === 1 ? 'Completed' : 'Not Completed'),
-          color: '#d1d5db', // Gray text
+          color: '#d1d5db',
         },
-        grid: {
-          color: '#334155', // Slate grid lines
-        },
+        grid: { color: '#334155' },
       },
       x: {
-        ticks: {
-          color: '#d1d5db', // Gray text
-        },
-        grid: {
-          color: '#334155', // Slate grid lines
-        },
+        ticks: { color: '#d1d5db' },
+        grid: { color: '#334155' },
       },
     },
     plugins: {
-      legend: {
-        labels: {
-          color: '#d1d5db', // Gray legend text
-        },
-      },
+      legend: { labels: { color: '#d1d5db' } },
     },
     maintainAspectRatio: false,
   };
 
   return (
     <div className="text-white">
-      {/* Header */}
       <h2 className="text-2xl text-gray-400 font-bold mb-6">Habit Builder</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {/* Add Habit Form */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
@@ -292,7 +279,6 @@ function Habits() {
         <h3 className="text-xl font-bold mb-4">History</h3>
         <p className="text-gray-400 mb-4">{getWeeklySummary()}</p>
 
-        {/* Habit Progress Graph */}
         {habits.length > 0 ? (
           <div>
             <div className="mb-4">
