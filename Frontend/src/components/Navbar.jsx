@@ -1,6 +1,48 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
 function Navbar({ toggleSidebar, toggleTheme, theme, isSidebarOpen }) {
-  // Mock total points
-  const totalPoints = 150;
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [userData, setUserData] = useState({ username: 'User', profileImage: 'https://via.placeholder.com/40' });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to view user data');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      try {
+        const response = await axios.get('http://localhost:5000/api/user', { headers });
+        const { points, username, profileImage } = response.data;
+        setTotalPoints(points || 0);
+        setUserData({
+          username: username || 'User',
+          profileImage: profileImage || 'https://via.placeholder.com/40',
+        });
+        setError(''); // Clear error on success
+      } catch (err) {
+        console.error('Error fetching user data:', err.response?.data || err.message);
+        const errorMessage = err.response?.data?.error || 'Error fetching user data';
+        setError(errorMessage);
+        if (errorMessage === 'User not found') {
+          // Handle "User not found" specifically
+          setTotalPoints(0); // Reset to 0 instead of mock 150
+          setUserData({ username: 'Guest', profileImage: 'https://via.placeholder.com/40' });
+          localStorage.removeItem('token'); // Clear invalid token
+        } else {
+          // Fallback for other errors
+          setTotalPoints(150);
+          setUserData({ username: 'User', profileImage: 'https://via.placeholder.com/40' });
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <nav className="bg-slate-900 text-white p-4 flex justify-between items-center shadow">
@@ -37,12 +79,16 @@ function Navbar({ toggleSidebar, toggleTheme, theme, isSidebarOpen }) {
         {/* User Profile */}
         <div className="flex items-center space-x-2">
           <img
-            src="https://via.placeholder.com/40"
+            src={userData.profileImage}
             alt="User profile"
             className="w-10 h-10 rounded-full"
+            onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
           />
-          <span>User</span>
+          <span>{userData.username}</span>
         </div>
+
+        {/* Error Display */}
+        {error && <span className="text-red-500 text-sm">{error}</span>}
       </div>
     </nav>
   );

@@ -14,15 +14,29 @@ const db = new sqlite3.Database('./life_management.db', (err) => {
   else console.log('Connected to SQLite database');
 });
 
+// Updated Users table with profile_image
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    profile_image TEXT DEFAULT 'https://via.placeholder.com/40'
   )
 `, (err) => {
   if (err) console.error('Error creating users table:', err);
   else console.log('Users table ready');
+});
+
+// User Points table for gamification
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_points (
+    user_id INTEGER PRIMARY KEY,
+    points INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`, (err) => {
+  if (err) console.error('Error creating user_points table:', err);
+  else console.log('User_points table ready');
 });
 
 // Tasks table
@@ -41,7 +55,7 @@ db.run(`
     if (err) console.error('Error creating tasks table:', err);
     else console.log('Tasks table ready');
   });
-  
+
 // Goals table
 db.run(`
     CREATE TABLE IF NOT EXISTS goals (
@@ -103,7 +117,7 @@ db.run(`
     if (err) console.error('Error creating habits table:', err);
     else console.log('Habits table ready');
   });
-  
+
 db.run(`
     CREATE TABLE IF NOT EXISTS journal_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -190,17 +204,21 @@ db.run(`
 // Insert initial communities with specific settings
 db.serialize(() => {
   db.run('DELETE FROM communities'); // Remove in production
-  // LifeHub Tips - Admin only posting (admin_only_post = 1)
   db.run(
     'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by) VALUES (?, ?, ?, ?, ?)',
     [1, 'LifeHub Tips', 'Tips and tricks for using LifeHub.', 1, 1]
   );
-  // Job Finder - Anyone can post (admin_only_post = 0)
   db.run(
     'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by) VALUES (?, ?, ?, ?, ?)',
     [2, 'Job Finder', 'Post hiring opportunities or job-seeking offers.', 0, 1]
   );
 });
+
+// Ensure initial points entry for new users
+db.run(`
+  INSERT OR IGNORE INTO user_points (user_id, points) 
+  SELECT id, 0 FROM users WHERE NOT EXISTS (SELECT 1 FROM user_points WHERE user_points.user_id = users.id)
+`);
 
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -221,10 +239,15 @@ app.post('/api/auth/signup', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     db.run(
-      'INSERT INTO users (email, password) VALUES (?, ?)',
-      [email, hashedPassword],
+      'INSERT INTO users (email, password, profile_image) VALUES (?, ?, ?)',
+      [email, hashedPassword, 'https://via.placeholder.com/40'],
       function (err) {
         if (err) return res.status(400).json({ error: 'Email already exists' });
+        const userId = this.lastID;
+        // Insert initial points for new user
+        db.run('INSERT INTO user_points (user_id, points) VALUES (?, 0)', [userId], (err) => {
+          if (err) console.error('Error initializing points:', err);
+        });
         res.status(201).json({ message: 'Signup successful' });
       }
     );
@@ -248,6 +271,31 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
+app.get('/api/user', authenticateToken, (req, res) => {
+    console.log('Fetching user data for ID:', req.user.id); // Debug log
+    db.get(`
+      SELECT u.id, u.email, u.profile_image, COALESCE(up.points, 0) as points
+      FROM users u
+      LEFT JOIN user_points up ON u.id = up.user_id
+      WHERE u.id = ?
+    `, [req.user.id], (err, user) => {
+      if (err) {
+        console.error('Database error:', err.message);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (!user) {
+        console.log('No user found for ID:', req.user.id); // Debug log
+        return res.status(404).json({ error: 'User not found' });
+      }
+      console.log('User found:', user); // Debug log
+      res.json({
+        points: user.points,
+        username: user.email.split('@')[0],
+        profileImage: user.profile_image,
+      });
+    });
+  });
+
 // Tasks endpoints
 app.get('/api/tasks', authenticateToken, (req, res) => {
   db.all('SELECT * FROM tasks WHERE user_id = ?', [req.user.id], (err, rows) => {
@@ -269,6 +317,8 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     [req.user.id, title, deadline, category, subtasksJson],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for task creation (e.g., 10 points)
+      db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, title, deadline, category, subtasks, isDone: false });
     }
   );
@@ -281,6 +331,10 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     [isDone ? 1 : 0, req.params.id, req.user.id],
     function (err) {
       if (err || this.changes === 0) return res.status(404).json({ error: 'Task not found' });
+      // Add points for completing a task (e.g., 20 points)
+      if (isDone) {
+        db.run('UPDATE user_points SET points = points + 20 WHERE user_id = ?', [req.user.id]);
+      }
       res.json({ message: 'Task updated' });
     }
   );
@@ -301,6 +355,8 @@ app.post('/api/goals', authenticateToken, (req, res) => {
     [req.user.id, title, target, deadline, progress || 0],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for goal creation (e.g., 15 points)
+      db.run('UPDATE user_points SET points = points + 15 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, title, target, deadline, progress: progress || 0 });
     }
   );
@@ -333,6 +389,8 @@ app.post('/api/transactions', authenticateToken, (req, res) => {
     [req.user.id, type, amount, category, date, description || ''],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for transaction logging (e.g., 5 points)
+      db.run('UPDATE user_points SET points = points + 5 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, type, amount, category, date, description: description || '' });
     }
   );
@@ -353,6 +411,8 @@ app.post('/api/events', authenticateToken, (req, res) => {
     [req.user.id, title, date, time, inviteLink || ''],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for event creation (e.g., 10 points)
+      db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, title, date, time, inviteLink: inviteLink || '' });
     }
   );
@@ -378,6 +438,8 @@ app.post('/api/habits', authenticateToken, (req, res) => {
     [req.user.id, name, frequency, completionHistory],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for habit creation (e.g., 10 points)
+      db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, name, frequency, streak: 0, completionHistory: [] });
     }
   );
@@ -391,6 +453,10 @@ app.put('/api/habits/:id', authenticateToken, (req, res) => {
     [streak, completionHistoryJson, req.params.id, req.user.id],
     function (err) {
       if (err || this.changes === 0) return res.status(404).json({ error: 'Habit not found' });
+      // Add points for habit update (e.g., 5 points per streak increment)
+      if (streak > 0) {
+        db.run('UPDATE user_points SET points = points + 5 WHERE user_id = ?', [req.user.id]);
+      }
       res.json({ message: 'Habit updated' });
     }
   );
@@ -411,6 +477,8 @@ app.post('/api/journal', authenticateToken, (req, res) => {
     [req.user.id, date, text, mood],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for journal entry (e.g., 10 points)
+      db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({ id: this.lastID, date, text, mood });
     }
   );
@@ -449,6 +517,8 @@ app.post('/api/subscriptions', authenticateToken, (req, res) => {
         if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
         if (this.changes === 0) return res.status(400).json({ error: 'Already subscribed' });
         db.run('UPDATE communities SET subscribers = subscribers + 1 WHERE id = ?', [community_id]);
+        // Add points for subscribing (e.g., 5 points)
+        db.run('UPDATE user_points SET points = points + 5 WHERE user_id = ?', [req.user.id]);
         res.status(201).json({ message: 'Subscribed successfully' });
       }
     );
@@ -510,7 +580,6 @@ app.post('/api/posts', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // Check if the community is admin-only and if the user is the admin
   db.get('SELECT admin_only_post, created_by FROM communities WHERE id = ?', [community_id], (err, community) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!community) return res.status(404).json({ error: 'Community not found' });
@@ -519,18 +588,18 @@ app.post('/api/posts', authenticateToken, (req, res) => {
       return res.status(403).json({ error: 'Only admins can post in this community' });
     }
 
-    // Check if user is subscribed (for non-admin-only communities)
     if (!community.admin_only_post) {
       db.get('SELECT id FROM subscriptions WHERE user_id = ? AND community_id = ?', [req.user.id, community_id], (err, subscription) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!subscription) return res.status(403).json({ error: 'You must be subscribed to post in this community' });
 
-        // Proceed with post creation
         db.run(
           'INSERT INTO posts (user_id, community_id, title, content, category, media) VALUES (?, ?, ?, ?, ?, ?)',
           [req.user.id, community_id, title, content, category, media || ''],
           function (err) {
             if (err) return res.status(500).json({ error: err.message });
+            // Add points for posting (e.g., 10 points)
+            db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
             res.status(201).json({
               id: this.lastID,
               user_id: req.user.id,
@@ -549,12 +618,13 @@ app.post('/api/posts', authenticateToken, (req, res) => {
         );
       });
     } else {
-      // For admin-only, proceed directly since admin check passed
       db.run(
         'INSERT INTO posts (user_id, community_id, title, content, category, media) VALUES (?, ?, ?, ?, ?, ?)',
         [req.user.id, community_id, title, content, category, media || ''],
         function (err) {
           if (err) return res.status(500).json({ error: err.message });
+          // Add points for posting (e.g., 10 points)
+          db.run('UPDATE user_points SET points = points + 10 WHERE user_id = ?', [req.user.id]);
           res.status(201).json({
             id: this.lastID,
             user_id: req.user.id,
@@ -583,6 +653,8 @@ app.post('/api/posts/vote', authenticateToken, (req, res) => {
     [post_id],
     function (err) {
       if (err || this.changes === 0) return res.status(404).json({ error: 'Post not found' });
+      // Add points for voting (e.g., 2 points)
+      db.run('UPDATE user_points SET points = points + 2 WHERE user_id = ?', [req.user.id]);
       res.json({ message: 'Vote recorded' });
     }
   );
@@ -625,6 +697,8 @@ app.post('/api/comments', authenticateToken, (req, res) => {
     [req.user.id, post_id, content],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
+      // Add points for commenting (e.g., 5 points)
+      db.run('UPDATE user_points SET points = points + 5 WHERE user_id = ?', [req.user.id]);
       res.status(201).json({
         id: this.lastID,
         user_id: req.user.id,
