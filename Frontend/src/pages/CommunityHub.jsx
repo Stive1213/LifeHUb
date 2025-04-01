@@ -4,7 +4,6 @@ import axios from 'axios';
 function CommunityHub() {
   const [communities, setCommunities] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [comments, setComments] = useState({});
   const [subscribedCommunities, setSubscribedCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [newPost, setNewPost] = useState({ title: '', content: '', category: 'Tips', media: '' });
@@ -49,11 +48,17 @@ function CommunityHub() {
     try {
       const postsRes = await axios.get(`http://localhost:5000/api/posts?community_id=${communityId}`, { headers });
       const postsWithComments = await Promise.all(postsRes.data.map(async (post) => {
-        const commentsRes = await axios.get(`http://localhost:5000/api/comments?post_id=${post.id}`, { headers });
-        return { ...post, comments: commentsRes.data };
+        try {
+          const commentsRes = await axios.get(`http://localhost:5000/api/comments?post_id=${post.id}`, { headers });
+          return { ...post, comments: commentsRes.data || [] }; // Ensure comments is always an array
+        } catch (commentErr) {
+          console.error(`Error fetching comments for post ${post.id}:`, commentErr.response?.data);
+          return { ...post, comments: [] }; // Fallback to empty array on error
+        }
       }));
       setPosts(postsWithComments);
     } catch (err) {
+      console.error('Error fetching posts:', err.response?.data);
       setError(err.response?.data?.error || 'Error fetching posts');
     }
   };
@@ -89,7 +94,7 @@ function CommunityHub() {
   };
 
   const handleSubmitPost = async (e) => {
-    e.preventDefault(); // This prevents the default form submission
+    e.preventDefault();
     if (!newPost.title || !newPost.content || !selectedCommunity) {
       setError('Please fill in all required fields');
       return;
@@ -110,9 +115,9 @@ function CommunityHub() {
         category: newPost.category,
         media: newPost.media,
       }, { headers });
-      setPosts([res.data, ...posts]);
+      setPosts([{ ...res.data, comments: [] }, ...posts]); // Ensure new post has comments array
       setNewPost({ title: '', content: '', category: selectedCommunity === '2' ? 'Hiring' : 'Tips', media: '' });
-      setError(''); // Clear any previous errors on success
+      setError('');
     } catch (err) {
       console.error('Post submission error:', err.response?.data);
       setError(err.response?.data?.error || 'Error creating post');
@@ -150,7 +155,7 @@ function CommunityHub() {
     try {
       const res = await axios.post('http://localhost:5000/api/comments', { post_id: postId, content: newComment[postId] }, { headers });
       setPosts(posts.map(post =>
-        post.id === postId ? { ...post, comments: [...post.comments, res.data] } : post
+        post.id === postId ? { ...post, comments: [...(post.comments || []), res.data] } : post
       ));
       setNewComment({ ...newComment, [postId]: '' });
     } catch (err) {
@@ -237,7 +242,7 @@ function CommunityHub() {
           <>
             <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
               <h3 className="text-xl font-bold mb-4">
-                Create a Post in {communities.find(c => c.id === selectedCommunity)?.name}
+                Create a Post in {communities.find(c => c.id === selectedCommunity)?.name || 'Selected Community'}
               </h3>
               <form onSubmit={handleSubmitPost}>
                 <div className="mb-4">
@@ -337,7 +342,7 @@ function CommunityHub() {
                         <div>
                           <p className="font-bold text-lg">{post.title}</p>
                           <p className="text-sm text-gray-400">
-                            Posted by {post.author} in {communities.find(c => c.id === post.community_id)?.name} on{' '}
+                            Posted by {post.author} in {communities.find(c => c.id === post.community_id)?.name || 'Unknown Community'} on{' '}
                             {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                           </p>
                           <p className="text-sm text-purple-400">Category: {post.category}</p>
@@ -375,9 +380,9 @@ function CommunityHub() {
                       </div>
                       <div className="mt-4">
                         <h4 className="text-sm font-bold mb-2">Comments</h4>
-                        {post.comments.length > 0 ? (
+                        {(post.comments || []).length > 0 ? (
                           <ul className="space-y-2">
-                            {post.comments.map(comment => (
+                            {(post.comments || []).map(comment => (
                               <li key={comment.id} className="bg-slate-600 p-2 rounded-lg">
                                 <p className="text-sm text-gray-400">
                                   {comment.author} • {new Date(comment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
