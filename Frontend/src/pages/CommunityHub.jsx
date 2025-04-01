@@ -1,254 +1,224 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 function CommunityHub() {
-  // Mock data for communities
-  const [communities, setCommunities] = useState([
-    { id: '1', name: 'LifeHub Tips', description: 'Tips and tricks for using LifeHub.' },
-    { id: '2', name: 'Productivity Hacks', description: 'Share your best productivity tips!' },
-  ]);
-
-  // State for subscribed communities
-  const [subscribedCommunities, setSubscribedCommunities] = useState(['1']); // Initially subscribed to "LifeHub Tips"
-
-  // Mock data for posts
-  const [posts, setPosts] = useState([
-    {
-      id: '1',
-      communityId: '1',
-      title: 'How to Use the Calendar Effectively',
-      content: 'Here are some tips for organizing your events...',
-      category: 'Tips',
-      media: 'https://example.com/image.jpg',
-      author: 'Admin',
-      date: '2025-03-29T10:00:00Z',
-      upvotes: 5,
-      downvotes: 1,
-      comments: [
-        { id: 'c1', author: 'User2', content: 'Great tips!', date: '2025-03-29T10:05:00Z' },
-      ],
-      flagged: false,
-    },
-    {
-      id: '2',
-      communityId: '1',
-      title: 'Best Practices for Budget Tracking',
-      content: 'I found these strategies really helpful...',
-      category: 'Finance',
-      media: null,
-      author: 'Admin',
-      date: '2025-03-28T15:00:00Z',
-      upvotes: 3,
-      downvotes: 0,
-      comments: [],
-      flagged: false,
-    },
-  ]);
-
-  // State for selected community
+  const [communities, setCommunities] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [comments, setComments] = useState({});
+  const [subscribedCommunities, setSubscribedCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
-
-  // State for new post form
-  const [newPost, setNewPost] = useState({
-    title: '',
-    content: '',
-    category: 'Tips',
-    media: '',
-  });
-
-  // State for filters
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('Recent'); // Options: Recent, Popular
-
-  // State for comments
+  const [newPost, setNewPost] = useState({ title: '', content: '', category: 'Tips', media: '' });
   const [newComment, setNewComment] = useState({});
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('Recent');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState('');
 
-  // Mock admin status (set to false to simulate a regular user; change to true to test admin privileges)
-  const isAdmin = false;
+  const isAdmin = localStorage.getItem('userId') === '1';
+  const categories = selectedCommunity === '2' ? ['All', 'Hiring', 'For Hire'] : ['All', 'Tips', 'Finance', 'Productivity', 'Health', 'Other'];
 
-  // Predefined categories
-  const categories = ['All', 'Tips', 'Finance', 'Productivity', 'Health', 'Other'];
+  // Fetch communities and subscriptions on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to access Community Hub');
+      return;
+    }
 
-  // Handle community selection
-  const handleSelectCommunity = (communityId) => {
-    setSelectedCommunity(communityId);
-    setNewPost({ ...newPost, title: '', content: '', category: 'Tips', media: '' }); // Reset form when switching communities
-  };
+    const headers = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      axios.get('http://localhost:5000/api/communities', { headers }),
+      axios.get('http://localhost:5000/api/subscriptions', { headers }),
+    ])
+      .then(([communitiesRes, subscriptionsRes]) => {
+        setCommunities(communitiesRes.data);
+        setSubscribedCommunities(subscriptionsRes.data);
+      })
+      .catch((err) => setError(err.response?.data?.error || 'Error fetching data'));
 
-  // Handle community subscription
-  const handleSubscribe = (communityId) => {
-    if (subscribedCommunities.includes(communityId)) {
-      setSubscribedCommunities(subscribedCommunities.filter((id) => id !== communityId));
-      if (selectedCommunity === communityId) {
-        setSelectedCommunity(null); // Deselect the community if unsubscribed
-      }
-      console.log(`Unsubscribed from community: ${communityId}`);
-    } else {
-      setSubscribedCommunities([...subscribedCommunities, communityId]);
-      console.log(`Subscribed to community: ${communityId}`);
+    if (selectedCommunity) {
+      fetchPosts(selectedCommunity);
+    }
+  }, [selectedCommunity]);
+
+  const fetchPosts = async (communityId) => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      const postsRes = await axios.get(`http://localhost:5000/api/posts?community_id=${communityId}`, { headers });
+      const postsWithComments = await Promise.all(postsRes.data.map(async (post) => {
+        const commentsRes = await axios.get(`http://localhost:5000/api/comments?post_id=${post.id}`, { headers });
+        return { ...post, comments: commentsRes.data };
+      }));
+      setPosts(postsWithComments);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error fetching posts');
     }
   };
 
-  // Handle new post form input changes
+  const handleSelectCommunity = (communityId) => {
+    setSelectedCommunity(communityId);
+    setNewPost({ title: '', content: '', category: communityId === '2' ? 'Hiring' : 'Tips', media: '' });
+    setFilterCategory('All');
+    fetchPosts(communityId);
+  };
+
+  const handleSubscribe = async (communityId) => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      if (subscribedCommunities.includes(communityId)) {
+        await axios.delete('/api/subscriptions', { data: { community_id: communityId }, headers });
+        setSubscribedCommunities(subscribedCommunities.filter(id => id !== communityId));
+        if (selectedCommunity === communityId) setSelectedCommunity(null);
+      } else {
+        await axios.post('/api/subscriptions', { community_id: communityId }, { headers });
+        setSubscribedCommunities([...subscribedCommunities, communityId]);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error updating subscription');
+    }
+  };
+
   const handlePostChange = (e) => {
     setNewPost({ ...newPost, [e.target.name]: e.target.value });
   };
 
-  // Handle post submission
-  const handleSubmitPost = (e) => {
+  const handleSubmitPost = async (e) => {
     e.preventDefault();
     if (!newPost.title || !newPost.content || !selectedCommunity) return;
 
-    // Check if the selected community is "LifeHub Tips" (id: '1') and the user is not an admin
-    if (selectedCommunity === '1' && !isAdmin) {
-      alert('Only admins can post in LifeHub Tips.');
-      return;
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      const res = await axios.post('http://localhost:5000/api/posts', {
+        community_id: selectedCommunity,
+        title: newPost.title,
+        content: newPost.content,
+        category: newPost.category,
+        media: newPost.media,
+      }, { headers });
+      setPosts([res.data, ...posts]);
+      setNewPost({ title: '', content: '', category: selectedCommunity === '2' ? 'Hiring' : 'Tips', media: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error creating post');
     }
-
-    const post = {
-      id: Date.now().toString(),
-      communityId: selectedCommunity,
-      title: newPost.title,
-      content: newPost.content,
-      category: newPost.category,
-      media: newPost.media || null,
-      author: isAdmin ? 'Admin' : 'You',
-      date: new Date().toISOString(),
-      upvotes: 0,
-      downvotes: 0,
-      comments: [],
-      flagged: false,
-    };
-    console.log('Post created:', post);
-    setPosts([post, ...posts]);
-    setNewPost({
-      title: '',
-      content: '',
-      category: 'Tips',
-      media: '',
-    });
   };
 
-  // Handle upvote/downvote
-  const handleVote = (postId, type) => {
-    setPosts(
-      posts.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            upvotes: type === 'upvote' ? post.upvotes + 1 : post.upvotes,
-            downvotes: type === 'downvote' ? post.downvotes + 1 : post.downvotes,
-          };
-        }
-        return post;
-      })
-    );
+  const handleVote = async (postId, type) => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    await axios.post('/api/posts/vote', { post_id: postId, type }, { headers });
+    setPosts(posts.map(post =>
+      post.id === postId ? { ...post, [type + 's']: post[type + 's'] + 1 } : post
+    ));
   };
 
-  // Handle flagging a post
-  const handleFlag = (postId) => {
-    setPosts(
-      posts.map((post) => {
-        if (post.id === postId) {
-          console.log(`Post flagged: ${postId}`);
-          return { ...post, flagged: true };
-        }
-        return post;
-      })
-    );
+  const handleFlag = async (postId) => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    await axios.post('/api/posts/flag', { post_id: postId }, { headers });
+    setPosts(posts.map(post => post.id === postId ? { ...post, flagged: 1 } : post));
   };
 
-  // Handle adding a comment
-  const handleAddComment = (postId) => {
+  const handleAddComment = async (postId) => {
     if (!newComment[postId]) return;
-    setPosts(
-      posts.map((post) => {
-        if (post.id === postId) {
-          const comment = {
-            id: Date.now().toString(),
-            author: 'You',
-            content: newComment[postId],
-            date: new Date().toISOString(),
-          };
-          console.log('Comment added:', comment);
-          return { ...post, comments: [...post.comments, comment] };
-        }
-        return post;
-      })
-    );
-    setNewComment({ ...newComment, [postId]: '' });
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      const res = await axios.post('/api/comments', { post_id: postId, content: newComment[postId] }, { headers });
+      setPosts(posts.map(post =>
+        post.id === postId ? { ...post, comments: [...post.comments, res.data] } : post
+      ));
+      setNewComment({ ...newComment, [postId]: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error adding comment');
+    }
   };
 
-  // Filter and sort posts
+  const filteredCommunities = communities.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const topCommunities = [...communities]
+    .sort((a, b) => b.subscribers - a.subscribers)
+    .slice(0, 3);
+
   const filteredPosts = posts
-    .filter((post) => selectedCommunity && post.communityId === selectedCommunity) // Only show posts from the selected community
-    .filter((post) => filterCategory === 'All' || post.category === filterCategory); // Filter by category
+    .filter(post => selectedCommunity && post.community_id === selectedCommunity)
+    .filter(post => filterCategory === 'All' || post.category === filterCategory);
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (sortBy === 'Popular') {
-      const scoreA = a.upvotes - a.downvotes;
-      const scoreB = b.upvotes - b.downvotes;
-      return scoreB - scoreA; // Sort by net upvotes (descending)
-    }
-    return new Date(b.date) - new Date(a.date); // Sort by date (newest first)
+    if (sortBy === 'Popular') return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+    return new Date(b.date) - new Date(a.date);
   });
 
   return (
     <div className="text-white flex space-x-6">
-      {/* Community Selection */}
       <div className="w-80 bg-slate-800 p-6 rounded-lg shadow">
         <h3 className="text-xl font-bold mb-4">Communities</h3>
-        <div className="max-h-96 overflow-y-auto">
-          {communities.length > 0 ? (
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+        <div className="mb-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
+            placeholder="Search communities..."
+          />
+        </div>
+        <div className="max-h-48 overflow-y-auto mb-4">
+          {filteredCommunities.length > 0 ? (
             <ul className="space-y-4">
-              {communities.map((community) => (
+              {filteredCommunities.map(community => (
                 <li key={community.id} className="bg-slate-700 p-4 rounded-lg">
                   <div
                     onClick={() => handleSelectCommunity(community.id)}
-                    className={`cursor-pointer p-2 rounded-lg ${
-                      selectedCommunity === community.id ? 'bg-purple-500' : 'hover:bg-slate-600'
-                    }`}
+                    className={`cursor-pointer p-2 rounded-lg ${selectedCommunity === community.id ? 'bg-purple-500' : 'hover:bg-slate-600'}`}
                   >
                     <p className="font-bold">{community.name}</p>
                     <p className="text-sm text-gray-400">{community.description}</p>
                   </div>
-                  {subscribedCommunities.includes(community.id) ? (
-                    <button
-                      onClick={() => handleSubscribe(community.id)}
-                      className="mt-2 w-full py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-colors"
-                    >
-                      Unsubscribe
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSubscribe(community.id)}
-                      className="mt-2 w-full py-2 rounded-lg bg-purple-500 hover:bg-purple-600 transition-colors"
-                    >
-                      Subscribe
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleSubscribe(community.id)}
+                    className={`mt-2 w-full py-2 rounded-lg ${subscribedCommunities.includes(community.id) ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} transition-colors`}
+                  >
+                    {subscribedCommunities.includes(community.id) ? 'Unsubscribe' : 'Subscribe'}
+                  </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-400">No communities available.</p>
+            <p className="text-gray-400">No communities found.</p>
+          )}
+        </div>
+        <h4 className="text-lg font-bold mb-2">Top Communities</h4>
+        <div className="max-h-48 overflow-y-auto">
+          {topCommunities.length > 0 ? (
+            <ul className="space-y-2">
+              {topCommunities.map(community => (
+                <li key={community.id} className="bg-slate-700 p-2 rounded-lg">
+                  <p className="font-bold">{community.name}</p>
+                  <p className="text-sm text-gray-400">{community.subscribers} subscribers</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-400">No top communities available.</p>
           )}
         </div>
       </div>
 
-      {/* Post Creation and Post Feed */}
       <div className="flex-1">
         {selectedCommunity ? (
           <>
-            {/* Post Creation */}
             <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
               <h3 className="text-xl font-bold mb-4">
-                Create a Post in {communities.find((c) => c.id === selectedCommunity)?.name}
+                Create a Post in {communities.find(c => c.id === selectedCommunity)?.name}
               </h3>
               <form onSubmit={handleSubmitPost}>
                 <div className="mb-4">
-                  <label htmlFor="title" className="block text-sm text-gray-400 mb-2">
-                    Title
-                  </label>
+                  <label htmlFor="title" className="block text-sm text-gray-400 mb-2">Title</label>
                   <input
                     type="text"
                     id="title"
@@ -260,9 +230,7 @@ function CommunityHub() {
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="content" className="block text-sm text-gray-400 mb-2">
-                    Content
-                  </label>
+                  <label htmlFor="content" className="block text-sm text-gray-400 mb-2">Content</label>
                   <textarea
                     id="content"
                     name="content"
@@ -274,9 +242,7 @@ function CommunityHub() {
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="category" className="block text-sm text-gray-400 mb-2">
-                    Category
-                  </label>
+                  <label htmlFor="category" className="block text-sm text-gray-400 mb-2">Category</label>
                   <select
                     id="category"
                     name="category"
@@ -284,17 +250,13 @@ function CommunityHub() {
                     onChange={handlePostChange}
                     className="w-full p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
                   >
-                    {categories.slice(1).map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
+                    {categories.slice(1).map(category => (
+                      <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="media" className="block text-sm text-gray-400 mb-2">
-                    Media URL (Optional)
-                  </label>
+                  <label htmlFor="media" className="block text-sm text-gray-400 mb-2">Media URL (Optional)</label>
                   <input
                     type="text"
                     id="media"
@@ -314,32 +276,24 @@ function CommunityHub() {
               </form>
             </div>
 
-            {/* Post Feed */}
             <div className="bg-slate-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-bold mb-4">Post Feed</h3>
-              {/* Filters */}
               <div className="flex space-x-4 mb-4">
                 <div>
-                  <label htmlFor="filter-category" className="block text-sm text-gray-400 mb-2">
-                    Filter by Category
-                  </label>
+                  <label htmlFor="filter-category" className="block text-sm text-gray-400 mb-2">Filter by Category</label>
                   <select
                     id="filter-category"
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
                     className="p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
                   >
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
+                    {categories.map(category => (
+                      <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="sort-by" className="block text-sm text-gray-400 mb-2">
-                    Sort By
-                  </label>
+                  <label htmlFor="sort-by" className="block text-sm text-gray-400 mb-2">Sort By</label>
                   <select
                     id="sort-by"
                     value={sortBy}
@@ -352,22 +306,16 @@ function CommunityHub() {
                 </div>
               </div>
 
-              {/* Posts */}
               {sortedPosts.length > 0 ? (
                 <ul className="space-y-6">
-                  {sortedPosts.map((post) => (
+                  {sortedPosts.map(post => (
                     <li key={post.id} className="bg-slate-700 p-4 rounded-lg">
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-bold text-lg">{post.title}</p>
                           <p className="text-sm text-gray-400">
-                            Posted by {post.author} in{' '}
-                            {communities.find((c) => c.id === post.communityId)?.name} on{' '}
-                            {new Date(post.date).toLocaleDateString('en-US', {
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
+                            Posted by {post.author} in {communities.find(c => c.id === post.community_id)?.name} on{' '}
+                            {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                           </p>
                           <p className="text-sm text-purple-400">Category: {post.category}</p>
                           <p className="mt-2">{post.content}</p>
@@ -395,28 +343,21 @@ function CommunityHub() {
                           </button>
                           <button
                             onClick={() => handleFlag(post.id)}
-                            className={`text-yellow-400 hover:text-yellow-500 ${
-                              post.flagged ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                            className={`text-yellow-400 hover:text-yellow-500 ${post.flagged ? 'opacity-50 cursor-not-allowed' : ''}`}
                             disabled={post.flagged}
                           >
                             ⚑ {post.flagged ? 'Flagged' : 'Flag'}
                           </button>
                         </div>
                       </div>
-                      {/* Comments Section */}
                       <div className="mt-4">
                         <h4 className="text-sm font-bold mb-2">Comments</h4>
                         {post.comments.length > 0 ? (
                           <ul className="space-y-2">
-                            {post.comments.map((comment) => (
+                            {post.comments.map(comment => (
                               <li key={comment.id} className="bg-slate-600 p-2 rounded-lg">
                                 <p className="text-sm text-gray-400">
-                                  {comment.author} •{' '}
-                                  {new Date(comment.date).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                  })}
+                                  {comment.author} • {new Date(comment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </p>
                                 <p>{comment.content}</p>
                               </li>
@@ -429,9 +370,7 @@ function CommunityHub() {
                           <input
                             type="text"
                             value={newComment[post.id] || ''}
-                            onChange={(e) =>
-                              setNewComment({ ...newComment, [post.id]: e.target.value })
-                            }
+                            onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
                             className="flex-1 p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
                             placeholder="Add a comment..."
                           />

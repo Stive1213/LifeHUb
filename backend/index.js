@@ -117,6 +117,40 @@ db.run(`
     else console.log('Journal_entries table ready');
   });
 
+// Community table with subscriber count
+db.run(`
+    CREATE TABLE IF NOT EXISTS communities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      admin_only_post INTEGER DEFAULT 0,
+      created_by INTEGER,
+      subscribers INTEGER DEFAULT 0,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating communities table:', err);
+    else console.log('Communities table ready');
+  });
+  
+  // Subscription table (to track user subscriptions)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      community_id INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (community_id) REFERENCES communities(id),
+      UNIQUE (user_id, community_id)
+    )
+  `, (err) => {
+    if (err) console.error('Error creating subscriptions table:', err);
+    else console.log('Subscriptions table ready');
+  });
+  
+  
+  
+ 
   const authenticateToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
     if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -334,6 +368,76 @@ app.get('/api/journal', authenticateToken, (req, res) => {
       function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.status(201).json({ id: this.lastID, date, text, mood });
+      }
+    );
+  });
+
+  // Insert initial communities (ensure they persist)
+  db.serialize(() => {
+    db.run('DELETE FROM communities'); // Clear existing for fresh start (remove in production)
+    db.run(
+      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
+      [1, 'LifeHub Tips', 'Tips and tricks for using LifeHub.', 1, 1, 5] // Mock 5 subscribers
+    );
+    db.run(
+      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
+      [2, 'Find Jobs', 'Post hiring opportunities or job-seeking offers.', 0, 1, 3] // Mock 3 subscribers
+    );
+    db.run(
+      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
+      [3, 'Productivity Hacks', 'Share your best productivity tips!', 0, 1, 7] // Mock 7 subscribers
+    );
+  });
+
+   // Updated /api/communities endpoint with subscription info
+   app.get('/api/communities', authenticateToken, (req, res) => {
+    db.all(`
+      SELECT c.*, COUNT(s.user_id) as subscriber_count 
+      FROM communities c 
+      LEFT JOIN subscriptions s ON c.id = s.community_id 
+      GROUP BY c.id, c.name, c.description, c.admin_only_post, c.created_by, c.subscribers
+    `, (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows.map(row => ({
+        ...row,
+        subscribers: row.subscriber_count // Use dynamic count from subscriptions
+      })));
+    });
+  });
+  
+  // Subscription endpoints
+  app.post('/api/subscriptions', authenticateToken, (req, res) => {
+    const { community_id } = req.body;
+    db.run(
+      'INSERT INTO subscriptions (user_id, community_id) VALUES (?, ?)',
+      [req.user.id, community_id],
+      function (err) {
+        if (err && err.code === 'SQLITE_CONSTRAINT') return res.status(400).json({ error: 'Already subscribed' });
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: 'Subscribed successfully' });
+      }
+    );
+  });
+  
+  app.delete('/api/subscriptions', authenticateToken, (req, res) => {
+    const { community_id } = req.body;
+    db.run(
+      'DELETE FROM subscriptions WHERE user_id = ? AND community_id = ?',
+      [req.user.id, community_id],
+      function (err) {
+        if (err || this.changes === 0) return res.status(404).json({ error: 'Subscription not found' });
+        res.json({ message: 'Unsubscribed successfully' });
+      }
+    );
+  });
+  
+  app.get('/api/subscriptions', authenticateToken, (req, res) => {
+    db.all(
+      'SELECT community_id FROM subscriptions WHERE user_id = ?',
+      [req.user.id],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows.map(row => row.community_id));
       }
     );
   });
