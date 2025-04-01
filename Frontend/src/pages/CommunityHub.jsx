@@ -17,7 +17,6 @@ function CommunityHub() {
   const isAdmin = localStorage.getItem('userId') === '1';
   const categories = selectedCommunity === '2' ? ['All', 'Hiring', 'For Hire'] : ['All', 'Tips', 'Finance', 'Productivity', 'Health', 'Other'];
 
-  // Fetch communities and subscriptions on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -32,9 +31,12 @@ function CommunityHub() {
     ])
       .then(([communitiesRes, subscriptionsRes]) => {
         setCommunities(communitiesRes.data);
-        setSubscribedCommunities(subscriptionsRes.data);
+        setSubscribedCommunities(subscriptionsRes.data.map(sub => sub.id));
       })
-      .catch((err) => setError(err.response?.data?.error || 'Error fetching data'));
+      .catch((err) => {
+        console.error('Fetch error:', err.response?.data);
+        setError(err.response?.data?.error || 'Error fetching data');
+      });
 
     if (selectedCommunity) {
       fetchPosts(selectedCommunity);
@@ -68,12 +70,14 @@ function CommunityHub() {
     const headers = { Authorization: `Bearer ${token}` };
     try {
       if (subscribedCommunities.includes(communityId)) {
-        await axios.delete('/api/subscriptions', { data: { community_id: communityId }, headers });
+        await axios.delete('http://localhost:5000/api/subscriptions', { data: { community_id: communityId }, headers });
         setSubscribedCommunities(subscribedCommunities.filter(id => id !== communityId));
+        setCommunities(communities.map(c => c.id === communityId ? { ...c, subscribers: c.subscribers - 1, isSubscribed: false } : c));
         if (selectedCommunity === communityId) setSelectedCommunity(null);
       } else {
-        await axios.post('/api/subscriptions', { community_id: communityId }, { headers });
+        await axios.post('http://localhost:5000/api/subscriptions', { community_id: communityId }, { headers });
         setSubscribedCommunities([...subscribedCommunities, communityId]);
+        setCommunities(communities.map(c => c.id === communityId ? { ...c, subscribers: c.subscribers + 1, isSubscribed: true } : c));
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Error updating subscription');
@@ -85,10 +89,18 @@ function CommunityHub() {
   };
 
   const handleSubmitPost = async (e) => {
-    e.preventDefault();
-    if (!newPost.title || !newPost.content || !selectedCommunity) return;
+    e.preventDefault(); // This prevents the default form submission
+    if (!newPost.title || !newPost.content || !selectedCommunity) {
+      setError('Please fill in all required fields');
+      return;
+    }
 
     const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to post');
+      return;
+    }
+
     const headers = { Authorization: `Bearer ${token}` };
     try {
       const res = await axios.post('http://localhost:5000/api/posts', {
@@ -100,7 +112,9 @@ function CommunityHub() {
       }, { headers });
       setPosts([res.data, ...posts]);
       setNewPost({ title: '', content: '', category: selectedCommunity === '2' ? 'Hiring' : 'Tips', media: '' });
+      setError(''); // Clear any previous errors on success
     } catch (err) {
+      console.error('Post submission error:', err.response?.data);
       setError(err.response?.data?.error || 'Error creating post');
     }
   };
@@ -108,17 +122,25 @@ function CommunityHub() {
   const handleVote = async (postId, type) => {
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
-    await axios.post('/api/posts/vote', { post_id: postId, type }, { headers });
-    setPosts(posts.map(post =>
-      post.id === postId ? { ...post, [type + 's']: post[type + 's'] + 1 } : post
-    ));
+    try {
+      await axios.post('http://localhost:5000/api/posts/vote', { post_id: postId, type }, { headers });
+      setPosts(posts.map(post =>
+        post.id === postId ? { ...post, [type + 's']: post[type + 's'] + 1 } : post
+      ));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error voting');
+    }
   };
 
   const handleFlag = async (postId) => {
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
-    await axios.post('/api/posts/flag', { post_id: postId }, { headers });
-    setPosts(posts.map(post => post.id === postId ? { ...post, flagged: 1 } : post));
+    try {
+      await axios.post('http://localhost:5000/api/posts/flag', { post_id: postId }, { headers });
+      setPosts(posts.map(post => post.id === postId ? { ...post, flagged: 1 } : post));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error flagging post');
+    }
   };
 
   const handleAddComment = async (postId) => {
@@ -126,7 +148,7 @@ function CommunityHub() {
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      const res = await axios.post('/api/comments', { post_id: postId, content: newComment[postId] }, { headers });
+      const res = await axios.post('http://localhost:5000/api/comments', { post_id: postId, content: newComment[postId] }, { headers });
       setPosts(posts.map(post =>
         post.id === postId ? { ...post, comments: [...post.comments, res.data] } : post
       ));
@@ -178,12 +200,13 @@ function CommunityHub() {
                   >
                     <p className="font-bold">{community.name}</p>
                     <p className="text-sm text-gray-400">{community.description}</p>
+                    <p className="text-sm text-gray-400">{community.subscribers} subscribers</p>
                   </div>
                   <button
                     onClick={() => handleSubscribe(community.id)}
-                    className={`mt-2 w-full py-2 rounded-lg ${subscribedCommunities.includes(community.id) ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} transition-colors`}
+                    className={`mt-2 w-full py-2 rounded-lg ${community.isSubscribed ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} transition-colors`}
                   >
-                    {subscribedCommunities.includes(community.id) ? 'Unsubscribe' : 'Subscribe'}
+                    {community.isSubscribed ? 'Unsubscribe' : 'Subscribe'}
                   </button>
                 </li>
               ))}

@@ -24,6 +24,7 @@ db.run(`
   if (err) console.error('Error creating users table:', err);
   else console.log('Users table ready');
 });
+
 // Tasks table
 db.run(`
     CREATE TABLE IF NOT EXISTS tasks (
@@ -32,7 +33,7 @@ db.run(`
       title TEXT NOT NULL,
       deadline TEXT,
       category TEXT,
-      subtasks TEXT, -- Store as JSON string
+      subtasks TEXT,
       isDone INTEGER DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
@@ -41,8 +42,8 @@ db.run(`
     else console.log('Tasks table ready');
   });
   
-  // Goals table
-  db.run(`
+// Goals table
+db.run(`
     CREATE TABLE IF NOT EXISTS goals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -57,7 +58,7 @@ db.run(`
     else console.log('Goals table ready');
   });
 
-  db.run(`
+db.run(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -73,7 +74,7 @@ db.run(`
     else console.log('Transactions table ready');
   });
 
-  db.run(`
+db.run(`
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -88,7 +89,7 @@ db.run(`
     else console.log('Events table ready');
   });
 
-  db.run(`
+db.run(`
     CREATE TABLE IF NOT EXISTS habits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -103,7 +104,7 @@ db.run(`
     else console.log('Habits table ready');
   });
   
-  db.run(`
+db.run(`
     CREATE TABLE IF NOT EXISTS journal_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -117,7 +118,7 @@ db.run(`
     else console.log('Journal_entries table ready');
   });
 
-// Community table with subscriber count
+// Community table
 db.run(`
     CREATE TABLE IF NOT EXISTS communities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,9 +133,9 @@ db.run(`
     if (err) console.error('Error creating communities table:', err);
     else console.log('Communities table ready');
   });
-  
-  // Subscription table (to track user subscriptions)
-  db.run(`
+
+// Subscription table
+db.run(`
     CREATE TABLE IF NOT EXISTS subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -147,20 +148,70 @@ db.run(`
     if (err) console.error('Error creating subscriptions table:', err);
     else console.log('Subscriptions table ready');
   });
-  
-  
-  
- 
-  const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-  
-    jwt.verify(token, 'your-secret-key', (err, user) => {
-      if (err) return res.status(403).json({ error: 'Invalid token' });
-      req.user = user; // Attach user info (id, email) to request
-      next();
-    });
-  };
+
+// Posts table
+db.run(`
+  CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    community_id INTEGER,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    category TEXT NOT NULL,
+    media TEXT,
+    date TEXT DEFAULT CURRENT_TIMESTAMP,
+    upvotes INTEGER DEFAULT 0,
+    downvotes INTEGER DEFAULT 0,
+    flagged INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (community_id) REFERENCES communities(id)
+  )
+`, (err) => {
+  if (err) console.error('Error creating posts table:', err);
+  else console.log('Posts table ready');
+});
+
+// Comments table
+db.run(`
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    post_id INTEGER,
+    content TEXT NOT NULL,
+    date TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+  )
+`, (err) => {
+  if (err) console.error('Error creating comments table:', err);
+  else console.log('Comments table ready');
+});
+
+// Insert initial communities with specific settings
+db.serialize(() => {
+  db.run('DELETE FROM communities'); // Remove in production
+  // LifeHub Tips - Admin only posting (admin_only_post = 1)
+  db.run(
+    'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by) VALUES (?, ?, ?, ?, ?)',
+    [1, 'LifeHub Tips', 'Tips and tricks for using LifeHub.', 1, 1]
+  );
+  // Job Finder - Anyone can post (admin_only_post = 0)
+  db.run(
+    'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by) VALUES (?, ?, ?, ?, ?)',
+    [2, 'Job Finder', 'Post hiring opportunities or job-seeking offers.', 0, 1]
+  );
+});
+
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+  jwt.verify(token, 'your-secret-key', (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
 app.get('/', (req, res) => {
   res.send('Backend is running!');
 });
@@ -196,251 +247,396 @@ app.post('/api/auth/login', (req, res) => {
     res.json({ token });
   });
 });
-// Get all tasks for the logged-in user
+
+// Tasks endpoints
 app.get('/api/tasks', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM tasks WHERE user_id = ?', [req.user.id], (err, rows) => {
+  db.all('SELECT * FROM tasks WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const tasks = rows.map((task) => ({
+      ...task,
+      subtasks: JSON.parse(task.subtasks || '[]'),
+      isDone: !!task.isDone,
+    }));
+    res.json(tasks);
+  });
+});
+
+app.post('/api/tasks', authenticateToken, (req, res) => {
+  const { title, deadline, category, subtasks } = req.body;
+  const subtasksJson = JSON.stringify(subtasks || []);
+  db.run(
+    'INSERT INTO tasks (user_id, title, deadline, category, subtasks, isDone) VALUES (?, ?, ?, ?, ?, 0)',
+    [req.user.id, title, deadline, category, subtasksJson],
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      // Parse subtasks from JSON string
-      const tasks = rows.map((task) => ({
-        ...task,
-        subtasks: JSON.parse(task.subtasks || '[]'),
-        isDone: !!task.isDone,
-      }));
-      res.json(tasks);
-    });
-  });
-  
-  // Add a new task
-  app.post('/api/tasks', authenticateToken, (req, res) => {
-    const { title, deadline, category, subtasks } = req.body;
-    const subtasksJson = JSON.stringify(subtasks || []);
-    db.run(
-      'INSERT INTO tasks (user_id, title, deadline, category, subtasks, isDone) VALUES (?, ?, ?, ?, ?, 0)',
-      [req.user.id, title, deadline, category, subtasksJson],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, title, deadline, category, subtasks, isDone: false });
-      }
-    );
-  });
-  
-  // Update task status
-  app.put('/api/tasks/:id', authenticateToken, (req, res) => {
-    const { isDone } = req.body;
-    db.run(
-      'UPDATE tasks SET isDone = ? WHERE id = ? AND user_id = ?',
-      [isDone ? 1 : 0, req.params.id, req.user.id],
-      function (err) {
-        if (err || this.changes === 0) return res.status(404).json({ error: 'Task not found' });
-        res.json({ message: 'Task updated' });
-      }
-    );
-  });
-  // Get all goals for the logged-in user
+      res.status(201).json({ id: this.lastID, title, deadline, category, subtasks, isDone: false });
+    }
+  );
+});
+
+app.put('/api/tasks/:id', authenticateToken, (req, res) => {
+  const { isDone } = req.body;
+  db.run(
+    'UPDATE tasks SET isDone = ? WHERE id = ? AND user_id = ?',
+    [isDone ? 1 : 0, req.params.id, req.user.id],
+    function (err) {
+      if (err || this.changes === 0) return res.status(404).json({ error: 'Task not found' });
+      res.json({ message: 'Task updated' });
+    }
+  );
+});
+
+// Goals endpoints
 app.get('/api/goals', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM goals WHERE user_id = ?', [req.user.id], (err, rows) => {
+  db.all('SELECT * FROM goals WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/goals', authenticateToken, (req, res) => {
+  const { title, target, deadline, progress } = req.body;
+  db.run(
+    'INSERT INTO goals (user_id, title, target, deadline, progress) VALUES (?, ?, ?, ?, ?)',
+    [req.user.id, title, target, deadline, progress || 0],
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
-    });
-  });
-  
-  // Add a new goal
-  app.post('/api/goals', authenticateToken, (req, res) => {
-    const { title, target, deadline, progress } = req.body;
-    db.run(
-      'INSERT INTO goals (user_id, title, target, deadline, progress) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, title, target, deadline, progress || 0],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, title, target, deadline, progress: progress || 0 });
-      }
-    );
-  });
-  
-  // Update a goal
-  app.put('/api/goals/:id', authenticateToken, (req, res) => {
-    const { title, target, deadline, progress } = req.body;
-    db.run(
-      'UPDATE goals SET title = ?, target = ?, deadline = ?, progress = ? WHERE id = ? AND user_id = ?',
-      [title, target, deadline, progress, req.params.id, req.user.id],
-      function (err) {
-        if (err || this.changes === 0) return res.status(404).json({ error: 'Goal not found' });
-        res.json({ message: 'Goal updated' });
-      }
-    );
-  });
-  
-// Get all transactions for the logged-in user
+      res.status(201).json({ id: this.lastID, title, target, deadline, progress: progress || 0 });
+    }
+  );
+});
+
+app.put('/api/goals/:id', authenticateToken, (req, res) => {
+  const { title, target, deadline, progress } = req.body;
+  db.run(
+    'UPDATE goals SET title = ?, target = ?, deadline = ?, progress = ? WHERE id = ? AND user_id = ?',
+    [title, target, deadline, progress, req.params.id, req.user.id],
+    function (err) {
+      if (err || this.changes === 0) return res.status(404).json({ error: 'Goal not found' });
+      res.json({ message: 'Goal updated' });
+    }
+  );
+});
+
+// Transactions endpoints
 app.get('/api/transactions', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM transactions WHERE user_id = ?', [req.user.id], (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
-    });
+  db.all('SELECT * FROM transactions WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
-  
-  // Add a new transaction
-  app.post('/api/transactions', authenticateToken, (req, res) => {
-    const { type, amount, category, date, description } = req.body;
-    db.run(
-      'INSERT INTO transactions (user_id, type, amount, category, date, description) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.user.id, type, amount, category, date, description || ''],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, type, amount, category, date, description: description || '' });
-      }
-    );
-  });
+});
 
-  // Get all events for the logged-in user
+app.post('/api/transactions', authenticateToken, (req, res) => {
+  const { type, amount, category, date, description } = req.body;
+  db.run(
+    'INSERT INTO transactions (user_id, type, amount, category, date, description) VALUES (?, ?, ?, ?, ?, ?)',
+    [req.user.id, type, amount, category, date, description || ''],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id: this.lastID, type, amount, category, date, description: description || '' });
+    }
+  );
+});
+
+// Events endpoints
 app.get('/api/events', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM events WHERE user_id = ?', [req.user.id], (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
-    });
+  db.all('SELECT * FROM events WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
-  
-  // Add a new event
-  app.post('/api/events', authenticateToken, (req, res) => {
-    const { title, date, time, inviteLink } = req.body;
-    db.run(
-      'INSERT INTO events (user_id, title, date, time, inviteLink) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, title, date, time, inviteLink || ''],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, title, date, time, inviteLink: inviteLink || '' });
-      }
-    );
-  });
+});
 
-// Get all habits for the logged-in user
+app.post('/api/events', authenticateToken, (req, res) => {
+  const { title, date, time, inviteLink } = req.body;
+  db.run(
+    'INSERT INTO events (user_id, title, date, time, inviteLink) VALUES (?, ?, ?, ?, ?)',
+    [req.user.id, title, date, time, inviteLink || ''],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id: this.lastID, title, date, time, inviteLink: inviteLink || '' });
+    }
+  );
+});
+
+// Habits endpoints
 app.get('/api/habits', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM habits WHERE user_id = ?', [req.user.id], (err, rows) => {
+  db.all('SELECT * FROM habits WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const habits = rows.map((habit) => ({
+      ...habit,
+      completionHistory: JSON.parse(habit.completionHistory || '[]'),
+    }));
+    res.json(habits);
+  });
+});
+
+app.post('/api/habits', authenticateToken, (req, res) => {
+  const { name, frequency } = req.body;
+  const completionHistory = JSON.stringify([]);
+  db.run(
+    'INSERT INTO habits (user_id, name, frequency, streak, completionHistory) VALUES (?, ?, ?, 0, ?)',
+    [req.user.id, name, frequency, completionHistory],
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      const habits = rows.map((habit) => ({
-        ...habit,
-        completionHistory: JSON.parse(habit.completionHistory || '[]'),
-      }));
-      res.json(habits);
-    });
-  });
-  
-  // Add a new habit
-  app.post('/api/habits', authenticateToken, (req, res) => {
-    const { name, frequency } = req.body;
-    const completionHistory = JSON.stringify([]);
-    db.run(
-      'INSERT INTO habits (user_id, name, frequency, streak, completionHistory) VALUES (?, ?, ?, 0, ?)',
-      [req.user.id, name, frequency, completionHistory],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, name, frequency, streak: 0, completionHistory: [] });
-      }
-    );
-  });
-  
-  // Update a habit (e.g., toggle completion)
-  app.put('/api/habits/:id', authenticateToken, (req, res) => {
-    const { streak, completionHistory } = req.body;
-    const completionHistoryJson = JSON.stringify(completionHistory);
-    db.run(
-      'UPDATE habits SET streak = ?, completionHistory = ? WHERE id = ? AND user_id = ?',
-      [streak, completionHistoryJson, req.params.id, req.user.id],
-      function (err) {
-        if (err || this.changes === 0) return res.status(404).json({ error: 'Habit not found' });
-        res.json({ message: 'Habit updated' });
-      }
-    );
-  });
-// Get all journal entries for the logged-in user
+      res.status(201).json({ id: this.lastID, name, frequency, streak: 0, completionHistory: [] });
+    }
+  );
+});
+
+app.put('/api/habits/:id', authenticateToken, (req, res) => {
+  const { streak, completionHistory } = req.body;
+  const completionHistoryJson = JSON.stringify(completionHistory);
+  db.run(
+    'UPDATE habits SET streak = ?, completionHistory = ? WHERE id = ? AND user_id = ?',
+    [streak, completionHistoryJson, req.params.id, req.user.id],
+    function (err) {
+      if (err || this.changes === 0) return res.status(404).json({ error: 'Habit not found' });
+      res.json({ message: 'Habit updated' });
+    }
+  );
+});
+
+// Journal endpoints
 app.get('/api/journal', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM journal_entries WHERE user_id = ?', [req.user.id], (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
-    });
+  db.all('SELECT * FROM journal_entries WHERE user_id = ?', [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
-  
-  // Add a new journal entry
-  app.post('/api/journal', authenticateToken, (req, res) => {
-    const { date, text, mood } = req.body;
-    db.run(
-      'INSERT INTO journal_entries (user_id, date, text, mood) VALUES (?, ?, ?, ?)',
-      [req.user.id, date, text, mood],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, date, text, mood });
-      }
-    );
-  });
+});
 
-  // Insert initial communities (ensure they persist)
-  db.serialize(() => {
-    db.run('DELETE FROM communities'); // Clear existing for fresh start (remove in production)
-    db.run(
-      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
-      [1, 'LifeHub Tips', 'Tips and tricks for using LifeHub.', 1, 1, 5] // Mock 5 subscribers
-    );
-    db.run(
-      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
-      [2, 'Find Jobs', 'Post hiring opportunities or job-seeking offers.', 0, 1, 3] // Mock 3 subscribers
-    );
-    db.run(
-      'INSERT OR IGNORE INTO communities (id, name, description, admin_only_post, created_by, subscribers) VALUES (?, ?, ?, ?, ?, ?)',
-      [3, 'Productivity Hacks', 'Share your best productivity tips!', 0, 1, 7] // Mock 7 subscribers
-    );
-  });
-
-   // Updated /api/communities endpoint with subscription info
-   app.get('/api/communities', authenticateToken, (req, res) => {
-    db.all(`
-      SELECT c.*, COUNT(s.user_id) as subscriber_count 
-      FROM communities c 
-      LEFT JOIN subscriptions s ON c.id = s.community_id 
-      GROUP BY c.id, c.name, c.description, c.admin_only_post, c.created_by, c.subscribers
-    `, (err, rows) => {
+app.post('/api/journal', authenticateToken, (req, res) => {
+  const { date, text, mood } = req.body;
+  db.run(
+    'INSERT INTO journal_entries (user_id, date, text, mood) VALUES (?, ?, ?, ?)',
+    [req.user.id, date, text, mood],
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json(rows.map(row => ({
-        ...row,
-        subscribers: row.subscriber_count // Use dynamic count from subscriptions
-      })));
-    });
+      res.status(201).json({ id: this.lastID, date, text, mood });
+    }
+  );
+});
+
+// Communities endpoints
+app.get('/api/communities', authenticateToken, (req, res) => {
+  db.all(`
+    SELECT c.*, 
+           (SELECT COUNT(*) FROM subscriptions s WHERE s.community_id = c.id) as subscriber_count,
+           EXISTS(SELECT 1 FROM subscriptions s WHERE s.community_id = c.id AND s.user_id = ?) as is_subscribed
+    FROM communities c
+    GROUP BY c.id, c.name, c.description, c.admin_only_post, c.created_by
+  `, [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows.map(row => ({
+      ...row,
+      subscribers: row.subscriber_count,
+      isSubscribed: !!row.is_subscribed
+    })));
   });
-  
-  // Subscription endpoints
-  app.post('/api/subscriptions', authenticateToken, (req, res) => {
-    const { community_id } = req.body;
+});
+
+app.post('/api/subscriptions', authenticateToken, (req, res) => {
+  const { community_id } = req.body;
+  if (!community_id) return res.status(400).json({ error: 'Community ID is required' });
+
+  db.get('SELECT id FROM communities WHERE id = ?', [community_id], (err, community) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!community) return res.status(404).json({ error: 'Community not found' });
+
     db.run(
-      'INSERT INTO subscriptions (user_id, community_id) VALUES (?, ?)',
+      'INSERT OR IGNORE INTO subscriptions (user_id, community_id) VALUES (?, ?)',
       [req.user.id, community_id],
       function (err) {
-        if (err && err.code === 'SQLITE_CONSTRAINT') return res.status(400).json({ error: 'Already subscribed' });
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
+        if (this.changes === 0) return res.status(400).json({ error: 'Already subscribed' });
+        db.run('UPDATE communities SET subscribers = subscribers + 1 WHERE id = ?', [community_id]);
         res.status(201).json({ message: 'Subscribed successfully' });
       }
     );
   });
-  
-  app.delete('/api/subscriptions', authenticateToken, (req, res) => {
-    const { community_id } = req.body;
-    db.run(
-      'DELETE FROM subscriptions WHERE user_id = ? AND community_id = ?',
-      [req.user.id, community_id],
-      function (err) {
-        if (err || this.changes === 0) return res.status(404).json({ error: 'Subscription not found' });
-        res.json({ message: 'Unsubscribed successfully' });
-      }
-    );
+});
+
+app.delete('/api/subscriptions', authenticateToken, (req, res) => {
+  const { community_id } = req.body;
+  if (!community_id) return res.status(400).json({ error: 'Community ID is required' });
+
+  db.run(
+    'DELETE FROM subscriptions WHERE user_id = ? AND community_id = ?',
+    [req.user.id, community_id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Not subscribed' });
+      db.run('UPDATE communities SET subscribers = subscribers - 1 WHERE id = ? AND subscribers > 0', [community_id]);
+      res.json({ message: 'Unsubscribed successfully' });
+    }
+  );
+});
+
+app.get('/api/subscriptions', authenticateToken, (req, res) => {
+  db.all(`
+    SELECT c.*, 
+           (SELECT COUNT(*) FROM subscriptions s WHERE s.community_id = c.id) as subscriber_count
+    FROM communities c
+    INNER JOIN subscriptions s ON c.id = s.community_id
+    WHERE s.user_id = ?
+  `, [req.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows.map(row => ({
+      ...row,
+      subscribers: row.subscriber_count,
+      isSubscribed: true
+    })));
   });
-  
-  app.get('/api/subscriptions', authenticateToken, (req, res) => {
-    db.all(
-      'SELECT community_id FROM subscriptions WHERE user_id = ?',
-      [req.user.id],
-      (err, rows) => {
+});
+
+// Posts endpoints
+app.get('/api/posts', authenticateToken, (req, res) => {
+  const { community_id } = req.query;
+  if (!community_id) return res.status(400).json({ error: 'Community ID is required' });
+
+  db.all(`
+    SELECT p.*, u.email as author 
+    FROM posts p 
+    JOIN users u ON p.user_id = u.id 
+    WHERE p.community_id = ?
+  `, [community_id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/posts', authenticateToken, (req, res) => {
+  const { community_id, title, content, category, media } = req.body;
+  if (!community_id || !title || !content || !category) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Check if the community is admin-only and if the user is the admin
+  db.get('SELECT admin_only_post, created_by FROM communities WHERE id = ?', [community_id], (err, community) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!community) return res.status(404).json({ error: 'Community not found' });
+
+    if (community.admin_only_post && req.user.id !== community.created_by) {
+      return res.status(403).json({ error: 'Only admins can post in this community' });
+    }
+
+    // Check if user is subscribed (for non-admin-only communities)
+    if (!community.admin_only_post) {
+      db.get('SELECT id FROM subscriptions WHERE user_id = ? AND community_id = ?', [req.user.id, community_id], (err, subscription) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows.map(row => row.community_id));
-      }
-    );
+        if (!subscription) return res.status(403).json({ error: 'You must be subscribed to post in this community' });
+
+        // Proceed with post creation
+        db.run(
+          'INSERT INTO posts (user_id, community_id, title, content, category, media) VALUES (?, ?, ?, ?, ?, ?)',
+          [req.user.id, community_id, title, content, category, media || ''],
+          function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({
+              id: this.lastID,
+              user_id: req.user.id,
+              community_id,
+              title,
+              content,
+              category,
+              media: media || '',
+              date: new Date().toISOString(),
+              upvotes: 0,
+              downvotes: 0,
+              flagged: 0,
+              author: req.user.email
+            });
+          }
+        );
+      });
+    } else {
+      // For admin-only, proceed directly since admin check passed
+      db.run(
+        'INSERT INTO posts (user_id, community_id, title, content, category, media) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.user.id, community_id, title, content, category, media || ''],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.status(201).json({
+            id: this.lastID,
+            user_id: req.user.id,
+            community_id,
+            title,
+            content,
+            category,
+            media: media || '',
+            date: new Date().toISOString(),
+            upvotes: 0,
+            downvotes: 0,
+            flagged: 0,
+            author: req.user.email
+          });
+        }
+      );
+    }
   });
+});
+
+app.post('/api/posts/vote', authenticateToken, (req, res) => {
+  const { post_id, type } = req.body;
+  const field = type === 'upvote' ? 'upvotes' : 'downvotes';
+  db.run(
+    `UPDATE posts SET ${field} = ${field} + 1 WHERE id = ?`,
+    [post_id],
+    function (err) {
+      if (err || this.changes === 0) return res.status(404).json({ error: 'Post not found' });
+      res.json({ message: 'Vote recorded' });
+    }
+  );
+});
+
+app.post('/api/posts/flag', authenticateToken, (req, res) => {
+  const { post_id } = req.body;
+  db.run(
+    'UPDATE posts SET flagged = 1 WHERE id = ?',
+    [post_id],
+    function (err) {
+      if (err || this.changes === 0) return res.status(404).json({ error: 'Post not found' });
+      res.json({ message: 'Post flagged' });
+    }
+  );
+});
+
+// Comments endpoints
+app.get('/api/comments', authenticateToken, (req, res) => {
+  const { post_id } = req.query;
+  if (!post_id) return res.status(400).json({ error: 'Post ID is required' });
+
+  db.all(`
+    SELECT c.*, u.email as author 
+    FROM comments c 
+    JOIN users u ON c.user_id = u.id 
+    WHERE c.post_id = ?
+  `, [post_id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/comments', authenticateToken, (req, res) => {
+  const { post_id, content } = req.body;
+  if (!post_id || !content) return res.status(400).json({ error: 'Missing required fields' });
+
+  db.run(
+    'INSERT INTO comments (user_id, post_id, content) VALUES (?, ?, ?)',
+    [req.user.id, post_id, content],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({
+        id: this.lastID,
+        user_id: req.user.id,
+        post_id,
+        content,
+        date: new Date().toISOString(),
+        author: req.user.email
+      });
+    }
+  );
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
