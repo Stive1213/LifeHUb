@@ -272,29 +272,29 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.get('/api/user', authenticateToken, (req, res) => {
-  console.log('Fetching user data for ID:', req.user.id); // Debug log
-  db.get(`
-    SELECT u.id, u.email, u.profile_image, COALESCE(up.points, 0) as points
-    FROM users u
-    LEFT JOIN user_points up ON u.id = up.user_id
-    WHERE u.id = ?
-  `, [req.user.id], (err, user) => {
-    if (err) {
-      console.error('Database error:', err.message);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    if (!user) {
-      console.log('No user found for ID:', req.user.id); // Debug log
-      return res.status(404).json({ error: 'User not found' });
-    }
-    console.log('User found:', user); // Debug log
-    res.json({
-      points: user.points,
-      username: user.email.split('@')[0],
-      profileImage: user.profile_image,
+    console.log('Fetching user data for ID:', req.user.id); // Debug log
+    db.get(`
+      SELECT u.id, u.email, u.profile_image, COALESCE(up.points, 0) as points
+      FROM users u
+      LEFT JOIN user_points up ON u.id = up.user_id
+      WHERE u.id = ?
+    `, [req.user.id], (err, user) => {
+      if (err) {
+        console.error('Database error:', err.message);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      if (!user) {
+        console.log('No user found for ID:', req.user.id); // Debug log
+        return res.status(404).json({ error: 'User not found' });
+      }
+      console.log('User found:', user); // Debug log
+      res.json({
+        points: user.points,
+        username: user.email.split('@')[0],
+        profileImage: user.profile_image,
+      });
     });
   });
-});
 
 // Tasks endpoints
 app.get('/api/tasks', authenticateToken, (req, res) => {
