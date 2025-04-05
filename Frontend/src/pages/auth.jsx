@@ -25,15 +25,31 @@ function Auth() {
 
     try {
       const endpoint = isSignup ? '/signup' : '/login';
-      const response = await axios.post(`http://localhost:5000/api/auth${endpoint}`, {
-        email,
-        password,
-      });
+      const url = `http://localhost:5000/api/auth${endpoint}`;
+      console.log(`Sending ${isSignup ? 'signup' : 'login'} request to:`, url);
 
-      localStorage.setItem('token', response.data.token);
-      navigate('/dashboard');
+      const response = await axios.post(url, { email, password });
+      console.log('Response:', response.data);
+
+      if (!isSignup) {
+        if (!response.data.token) {
+          throw new Error('No token received from login');
+        }
+        localStorage.setItem('token', response.data.token);
+        console.log('Token stored:', response.data.token);
+        navigate('/dashboard');
+      } else {
+        setError('Signup successful! Please log in.');
+        setIsSignup(false);
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong');
+      console.error('Error:', err);
+      if (err.code === 'ERR_NETWORK') {
+        setError('Network error: Backend might not be running on http://localhost:5000');
+      } else {
+        const errorMessage = err.response?.data?.error || err.message || 'Something went wrong';
+        setError(errorMessage);
+      }
     }
   };
 
