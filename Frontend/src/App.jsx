@@ -18,6 +18,10 @@ import MentalWellness from './pages/MentalWellness';
 import AIPoweredAssistant from './pages/AIPoweredAssistant';
 import Gamification from './pages/Gamification';
 import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import HealthWellness from './pages/HealthWellness';
+
 import './App.css';
 
 function App() {
@@ -72,6 +76,12 @@ function App() {
           <Route path="/assistant" element={renderProtectedPage(AIPoweredAssistant)} />
           <Route path="/gamification" element={renderProtectedPage(Gamification)} />
           <Route path="/notifications" element={renderProtectedPage(Notifications)} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/Settings" element={<Settings />} />
+          <Route path="/HealthWellness" element={<HealthWellness />} />
+
+
+
         </Route>
       </Routes>
     </Router>

@@ -5,7 +5,60 @@ function Sidebar({ isOpen, toggleSidebar }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState('Dashboard');
+  const [userData, setUserData] = useState({
+    username: '',
+    points: 0,
+    profileImage: 'https://via.placeholder.com/40',
+  });
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        console.log('Token from localStorage:', token); // Debug: Check if token exists
+        if (!token) {
+          console.error('No token found in localStorage');
+          setUserData({ username: 'Guest', points: 0, profileImage: 'https://via.placeholder.com/40' });
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/user', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log('Response status:', response.status); // Debug: Check HTTP status
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetched user data:', data); // Debug: Check the response data
+        setUserData({
+          username: data.username,
+          points: data.points,
+          profileImage: data.profileImage,
+        });
+      } catch (error) {
+        console.error('Error fetching user data:', error.message); // Debug: Log exact error
+        setUserData({
+          username: 'Guest',
+          points: 0,
+          profileImage: 'https://via.placeholder.com/40',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Rest of the code (useEffect for location and navItems) remains unchanged
   useEffect(() => {
     const path = location.pathname;
     if (path === '/dashboard') setActivePage('Dashboard');
@@ -58,17 +111,29 @@ function Sidebar({ isOpen, toggleSidebar }) {
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      {/* Header (Fixed at the top of the Sidebar) */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold">LifeHub</h2>
+        <div className="flex items-center space-x-3">
+          <img
+            src={userData.profileImage}
+            alt="Profile"
+            className="w-10 h-10 rounded-full"
+          />
+          <div>
+            <h2 className="text-lg font-bold">
+              {loading ? 'Loading...' : `Hi, ${userData.username}`}
+            </h2>
+            <p className="text-sm text-gray-400">
+              {loading ? '...' : `${userData.points} Points`}
+            </p>
+          </div>
+        </div>
         <button onClick={toggleSidebar} className="text-white">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      {/* Scrollable Navigation */}
-      <nav className="overflow-y-auto h-[calc(100vh-80px)]">
+      <nav className="overflow-y-auto h-[calc(100vh-120px)]">
         {navItems.map((item) => (
           <div
             key={item.name}
