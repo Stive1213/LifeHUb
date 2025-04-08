@@ -7,7 +7,11 @@ const goalRoutes = require('./routes/goalRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const habitRoutes = require('./routes/habitRoutes');
-const journalRoutes = require('./routes/journalRoutes'); // New
+const journalRoutes = require('./routes/journalRoutes');
+const communityRoutes = require('./routes/communityRoutes');     // New
+const subscriptionRoutes = require('./routes/subscriptionRoutes'); // New
+const postRoutes = require('./routes/postRoutes');             // New
+const commentRoutes = require('./routes/commentRoutes');       // New
 require('dotenv').config(); // Load .env variables
 
 const app = express();
@@ -16,7 +20,7 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors({
   origin: 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Added DELETE for unsubscribe
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use('/uploads', express.static('uploads'));
@@ -28,7 +32,11 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/habits', habitRoutes);
-app.use('/api/journal', journalRoutes); // New
+app.use('/api/journal', journalRoutes);
+app.use('/api/communities', communityRoutes);         // New
+app.use('/api/subscriptions', subscriptionRoutes);    // New
+app.use('/api/posts', postRoutes);                   // New
+app.use('/api/comments', commentRoutes);             // New
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
