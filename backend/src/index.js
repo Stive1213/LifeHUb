@@ -6,7 +6,8 @@ const taskRoutes = require('./routes/taskRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const eventRoutes = require('./routes/eventRoutes');
-const habitRoutes = require('./routes/habitRoutes'); // New
+const habitRoutes = require('./routes/habitRoutes');
+const journalRoutes = require('./routes/journalRoutes'); // New
 require('dotenv').config(); // Load .env variables
 
 const app = express();
@@ -26,7 +27,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/habits', habitRoutes); // New
+app.use('/api/habits', habitRoutes);
+app.use('/api/journal', journalRoutes); // New
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
