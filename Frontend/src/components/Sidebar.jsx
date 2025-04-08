@@ -7,47 +7,51 @@ function Sidebar({ isOpen, toggleSidebar }) {
   const [activePage, setActivePage] = useState('Dashboard');
   const [userData, setUserData] = useState({
     username: '',
-    points: 0,
+    totalPoints: 0,
     profileImage: 'https://via.placeholder.com/40',
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const token = localStorage.getItem('token');
-        console.log('Token from localStorage:', token); // Debug: Check if token exists
         if (!token) {
-          console.error('No token found in localStorage');
-          setUserData({ username: 'Guest', points: 0, profileImage: 'https://via.placeholder.com/40' });
-          return;
+          throw new Error('No authentication token found. Please log in.');
         }
 
-        const response = await fetch('http://localhost:5000/api/user', {
+        const response = await fetch('http://localhost:5000/api/auth/user', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // No quotes around Authorization
             'Content-Type': 'application/json',
           },
         });
 
-        console.log('Response status:', response.status); // Debug: Check HTTP status
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+          const errorText = await response.text();
+          throw new Error('Failed to fetch user data: ' + response.status + ' - ' + errorText);
         }
 
         const data = await response.json();
-        console.log('Fetched user data:', data); // Debug: Check the response data
+        const profileImage = data.profileImage.startsWith('http')
+          ? data.profileImage
+          : `http://localhost:5000${data.profileImage}`;
+
         setUserData({
-          username: data.username,
-          points: data.points,
-          profileImage: data.profileImage,
+          username: data.username || 'Guest',
+          totalPoints: data.totalPoints || 0,
+          profileImage: profileImage,
         });
-      } catch (error) {
-        console.error('Error fetching user data:', error.message); // Debug: Log exact error
+      } catch (err) {
+        console.error('Error fetching user data:', err.message);
+        setError(err.message);
         setUserData({
           username: 'Guest',
-          points: 0,
+          totalPoints: 0,
           profileImage: 'https://via.placeholder.com/40',
         });
       } finally {
@@ -58,26 +62,28 @@ function Sidebar({ isOpen, toggleSidebar }) {
     fetchUserData();
   }, []);
 
-  // Rest of the code (useEffect for location and navItems) remains unchanged
   useEffect(() => {
     const path = location.pathname;
-    if (path === '/dashboard') setActivePage('Dashboard');
-    else if (path === '/tasks-goals') setActivePage('Tasks & Goals');
-    else if (path === '/budget-tracker') setActivePage('Budget Tracker');
-    else if (path === '/calendar') setActivePage('Calendar');
-    else if (path === '/habits') setActivePage('Habits');
-    else if (path === '/journal') setActivePage('Journal');
-    else if (path === '/social-circle') setActivePage('Social Circle');
-    else if (path === '/documents') setActivePage('Documents');
-    else if (path === '/quick-tools') setActivePage('Quick Tools');
-    else if (path === '/community-hub') setActivePage('Community Hub');
-    else if (path === '/wellness') setActivePage('Wellness');
-    else if (path === '/assistant') setActivePage('Assistant');
-    else if (path === '/gamification') setActivePage('Gamification');
-    else if (path === '/health-wellness') setActivePage('Health & Wellness');
-    else if (path === '/notifications') setActivePage('Notifications');
-    else if (path === '/profile') setActivePage('Profile');
-    else if (path === '/settings') setActivePage('Settings');
+    const pageMap = {
+      '/dashboard': 'Dashboard',
+      '/tasks-goals': 'Tasks & Goals',
+      '/budget-tracker': 'Budget Tracker',
+      '/calendar': 'Calendar',
+      '/habits': 'Habits',
+      '/journal': 'Journal',
+      '/social-circle': 'Social Circle',
+      '/documents': 'Documents',
+      '/quick-tools': 'Quick Tools',
+      '/community-hub': 'Community Hub',
+      '/wellness': 'Wellness',
+      '/assistant': 'Assistant',
+      '/gamification': 'Gamification',
+      '/health-wellness': 'Health & Wellness',
+      '/notifications': 'Notifications',
+      '/profile': 'Profile',
+      '/settings': 'Settings',
+    };
+    setActivePage(pageMap[path] || 'Dashboard');
   }, [location]);
 
   const navItems = [
@@ -94,15 +100,20 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Wellness', icon: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z', path: '/wellness' },
     { name: 'Assistant', icon: 'M9 17c0 .55-.45 1-1 1s-1-.45-1-1v-3H5c-.55 0-1-.45-1-1s.45-1 1-1h2v-3c0-.55.45-1 1-1s1 .45 1 1v3h2c.55 0 1 .45 1 1s-.45 1-1 1H9v3zm6-1c-.55 0-1-.45-1-1s.45-1 1-1h4c.55 0 1 .45 1 1s-.45 1-1 1h-4z', path: '/assistant' },
     { name: 'Gamification', icon: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z', path: '/gamification' },
-    { name: 'Health & Wellness', icon: 'M12 19c-1.1 0-2-.9-2-2v-5H8v-2h2V5c0-1.1.9-2 2-2s2 .9 2 2v5h2v2h-2v5c0 1.1-.9 2-2 2z', path: '/HealthWellness' },
+    { name: 'Health & Wellness', icon: 'M12 19c-1.1 0-2-.9-2-2v-5H8v-2h2V5c0-1.1.9-2 2-2s2 .9 2 2v5h2v2h-2v5c0 1.1-.9 2-2 2z', path: '/health-wellness' },
     { name: 'Notifications', icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z', path: '/notifications' },
-    { name: 'Profile', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z', path: '/Profile' },
+    { name: 'Profile', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z', path: '/profile' },
     { name: 'Settings', icon: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.3-.06.62-.06.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z', path: '/settings' },
   ];
 
   const handleNavClick = (page, path) => {
     setActivePage(page);
     navigate(path);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
   };
 
   return (
@@ -116,14 +127,15 @@ function Sidebar({ isOpen, toggleSidebar }) {
           <img
             src={userData.profileImage}
             alt="Profile"
-            className="w-10 h-10 rounded-full"
+            className="w-10 h-10 rounded-full object-cover"
+            onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
           />
           <div>
             <h2 className="text-lg font-bold">
               {loading ? 'Loading...' : `Hi, ${userData.username}`}
             </h2>
             <p className="text-sm text-gray-400">
-              {loading ? '...' : `${userData.points} Points`}
+              {loading ? '...' : `${userData.totalPoints} Points`}
             </p>
           </div>
         </div>
@@ -133,7 +145,12 @@ function Sidebar({ isOpen, toggleSidebar }) {
           </svg>
         </button>
       </div>
-      <nav className="overflow-y-auto h-[calc(100vh-120px)]">
+      {error && (
+        <p className="text-red-500 text-sm mb-4">
+          {error.includes('token') ? 'Please log in to see your profile.' : 'Error loading profile.'}
+        </p>
+      )}
+      <nav className="overflow-y-auto h-[calc(100vh-160px)]">
         {navItems.map((item) => (
           <div
             key={item.name}
@@ -149,6 +166,17 @@ function Sidebar({ isOpen, toggleSidebar }) {
           </div>
         ))}
       </nav>
+      <div className="absolute bottom-4 w-[calc(100%-2rem)]">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-2 p-2 rounded-lg bg-red-500 hover:bg-red-600"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   );
 }
