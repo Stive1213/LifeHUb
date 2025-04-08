@@ -4,7 +4,9 @@ const { db } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const goalRoutes = require('./routes/goalRoutes');
-const transactionRoutes = require('./routes/transactionRoutes'); // New
+const transactionRoutes = require('./routes/transactionRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const habitRoutes = require('./routes/habitRoutes'); // New
 require('dotenv').config(); // Load .env variables
 
 const app = express();
@@ -22,7 +24,9 @@ app.get('/', (req, res) => res.send('Backend is running!'));
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/goals', goalRoutes);
-app.use('/api/transactions', transactionRoutes); // New
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/habits', habitRoutes); // New
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
