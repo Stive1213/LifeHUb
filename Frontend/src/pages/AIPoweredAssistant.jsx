@@ -1,43 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function AIPoweredAssistant() {
-  // State for chat conversation
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
+  const [token] = useState(localStorage.getItem('token')); // Assuming token is stored in localStorage after login
 
-  // Mock static tips
-  const staticTips = [
-    'Based on your budget, try reducing dining out expenses.',
-    'Set a daily goal to drink 8 glasses of water.',
-    'Take a 5-minute break every hour to boost productivity.',
-  ];
-
-  // Mock AI response logic
-  const getAssistantResponse = (input) => {
-    const lowerInput = input.toLowerCase();
-    if (lowerInput.includes('overspending') || lowerInput.includes('budget')) {
-      return 'Try cutting back on transport or dining out.';
-    } else if (lowerInput.includes('productivity') || lowerInput.includes('time')) {
-      return 'Consider using the Pomodoro technique to manage your time better.';
-    } else {
-      return 'I’m not sure about that, but here’s a tip: Set small, achievable goals to stay motivated!';
+  // Fetch assistant response from backend
+  const getAssistantResponse = async (input) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ question: input }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return data;
+      } else {
+        throw new Error(data.error || 'Failed to get response');
+      }
+    } catch (error) {
+      console.error('Error fetching assistant response:', error);
+      return { response: 'Sorry, something went wrong.', tips: ['Try again later.'] };
     }
   };
 
   // Handle user input submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userInput.trim()) return;
 
-    // Add user message to conversation
     const userMessage = { sender: 'user', text: userInput };
     setMessages([...messages, userMessage]);
 
-    // Simulate assistant response
-    const assistantResponse = getAssistantResponse(userInput);
-    setMessages((prev) => [...prev, { sender: 'assistant', text: assistantResponse }]);
+    const { response, tips } = await getAssistantResponse(userInput);
+    setMessages((prev) => [
+      ...prev,
+      { sender: 'assistant', text: response },
+      ...(tips.map(tip => ({ sender: 'assistant', text: `Tip: ${tip}` }))),
+    ]);
 
-    // Clear input
     setUserInput('');
   };
 
@@ -75,7 +80,7 @@ function AIPoweredAssistant() {
               </div>
             ))
           ) : (
-            <p className="text-gray-400">Ask me anything! For example, "Am I overspending?"</p>
+            <p className="text-gray-400">Ask me anything! For example, "What should I do about my expenses?"</p>
           )}
         </div>
         {/* Chat Input */}
@@ -86,7 +91,7 @@ function AIPoweredAssistant() {
             onChange={(e) => setUserInput(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 p-2 rounded-lg bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-purple-500"
-            placeholder="Type your question (e.g., 'Am I overspending?')"
+            placeholder="Type your question (e.g., 'What should I do about my expenses?')"
           />
           <button
             type="submit"
@@ -97,20 +102,10 @@ function AIPoweredAssistant() {
         </form>
       </div>
 
-      {/* Tips Section */}
+      {/* Tips Section (Optional, can be removed since tips are now in chat) */}
       <div className="w-80 bg-slate-800 p-6 rounded-lg shadow">
         <h3 className="text-xl font-bold mb-4">Life Tips</h3>
-        {staticTips.length > 0 ? (
-          <ul className="space-y-4">
-            {staticTips.map((tip, index) => (
-              <li key={index} className="bg-slate-700 p-4 rounded-lg">
-                <p>{tip}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-400">No tips available.</p>
-        )}
+        <p className="text-gray-400">Ask me a question to get personalized tips!</p>
       </div>
     </div>
   );

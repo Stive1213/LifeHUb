@@ -8,11 +8,12 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const habitRoutes = require('./routes/habitRoutes');
 const journalRoutes = require('./routes/journalRoutes');
-const communityRoutes = require('./routes/communityRoutes');     // New
-const subscriptionRoutes = require('./routes/subscriptionRoutes'); // New
-const postRoutes = require('./routes/postRoutes');             // New
-const commentRoutes = require('./routes/commentRoutes');       // New
-require('dotenv').config(); // Load .env variables
+const communityRoutes = require('./routes/communityRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const postRoutes = require('./routes/postRoutes');
+const commentRoutes = require('./routes/commentRoutes');
+const assistantRoutes = require('./routes/assistantRoutes'); // New
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -20,7 +21,7 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors({
   origin: 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Added DELETE for unsubscribe
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use('/uploads', express.static('uploads'));
@@ -33,10 +34,11 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/habits', habitRoutes);
 app.use('/api/journal', journalRoutes);
-app.use('/api/communities', communityRoutes);         // New
-app.use('/api/subscriptions', subscriptionRoutes);    // New
-app.use('/api/posts', postRoutes);                   // New
-app.use('/api/comments', commentRoutes);             // New
+app.use('/api/communities', communityRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/assistant', assistantRoutes); // New
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
