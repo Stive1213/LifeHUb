@@ -6,7 +6,7 @@ const db = new sqlite3.Database('./life_management.db', (err) => {
 });
 
 const createTables = () => {
-  // Users table (updated with new fields)
+  // Users table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,18 +22,47 @@ const createTables = () => {
       else console.log('Users table ready');
     });
 
-  // User Points table
+  // User Points table (includes opt_in_leaderboard from the start)
   db.run(`
     CREATE TABLE IF NOT EXISTS user_points (
       user_id INTEGER PRIMARY KEY,
       points INTEGER DEFAULT 0,
+      opt_in_leaderboard INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )`, (err) => {
       if (err) console.error('Error creating user_points table:', err.message);
       else console.log('User_points table ready');
     });
 
-  // Tasks table
+  // Point Earnings table (new for recent earnings)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS point_earnings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      description TEXT NOT NULL,
+      points INTEGER NOT NULL,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error('Error creating point_earnings table:', err.message);
+      else console.log('Point_earnings table ready');
+    });
+
+  // Badges table (new for badge gallery)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS badges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error('Error creating badges table:', err.message);
+      else console.log('Badges table ready');
+    });
+
+  // Tasks table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +78,7 @@ const createTables = () => {
       else console.log('Tasks table ready');
     });
 
-  // Goals table
+  // Goals table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS goals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +93,7 @@ const createTables = () => {
       else console.log('Goals table ready');
     });
 
-  // Transactions table
+  // Transactions table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +109,7 @@ const createTables = () => {
       else console.log('Transactions table ready');
     });
 
-  // Events table
+  // Events table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +124,7 @@ const createTables = () => {
       else console.log('Events table ready');
     });
 
-  // Habits table
+  // Habits table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS habits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,7 +139,7 @@ const createTables = () => {
       else console.log('Habits table ready');
     });
 
-  // Journal Entries table
+  // Journal Entries table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS journal_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,7 +153,7 @@ const createTables = () => {
       else console.log('Journal_entries table ready');
     });
 
-  // Communities table
+  // Communities table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS communities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,7 +168,7 @@ const createTables = () => {
       else console.log('Communities table ready');
     });
 
-  // Subscriptions table
+  // Subscriptions table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,7 +182,7 @@ const createTables = () => {
       else console.log('Subscriptions table ready');
     });
 
-  // Posts table
+  // Posts table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +203,7 @@ const createTables = () => {
       else console.log('Posts table ready');
     });
 
-  // Comments table
+  // Comments table (unchanged)
   db.run(`
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,7 +218,18 @@ const createTables = () => {
       else console.log('Comments table ready');
     });
 
-  // Initial data setup (run serially to ensure order)
+  // Ensure opt_in_leaderboard exists for existing tables
+  db.run(`
+    ALTER TABLE user_points ADD COLUMN opt_in_leaderboard INTEGER DEFAULT 1
+  `, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding opt_in_leaderboard column:', err.message);
+    } else {
+      console.log('opt_in_leaderboard column added or already exists');
+    }
+  });
+
+  // Initial data setup
   db.serialize(() => {
     db.run('DELETE FROM communities'); // Remove in production
     db.run(
@@ -203,8 +243,8 @@ const createTables = () => {
 
     // Ensure initial points entry for existing users
     db.run(`
-      INSERT OR IGNORE INTO user_points (user_id, points) 
-      SELECT id, 0 FROM users WHERE NOT EXISTS (SELECT 1 FROM user_points WHERE user_points.user_id = users.id)
+      INSERT OR IGNORE INTO user_points (user_id, points, opt_in_leaderboard) 
+      SELECT id, 0, 1 FROM users WHERE NOT EXISTS (SELECT 1 FROM user_points WHERE user_points.user_id = users.id)
     `);
   });
 };

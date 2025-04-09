@@ -13,6 +13,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const postRoutes = require('./routes/postRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const assistantRoutes = require('./routes/assistantRoutes'); // New
+const gamificationRoutes = require('./routes/gamificationRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/assistant', assistantRoutes); // New
+app.use('/api/gamification', gamificationRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);

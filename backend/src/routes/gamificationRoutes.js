@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { getUserPoints, getRecentEarnings, getBadges, getLeaderboard, updateLeaderboardOptIn } = require('../controllers/gamificationController');
+const { authenticateToken } = require('../middleware/auth'); // Assuming this exists
+const gamificationController = require('../controllers/gamificationController');
 
-router.get('/points', authenticateToken, getUserPoints);
-router.get('/earnings', authenticateToken, getRecentEarnings);
-router.get('/badges', authenticateToken, getBadges);
-router.get('/leaderboard', authenticateToken, getLeaderboard);
-router.put('/leaderboard/opt-in', authenticateToken, updateLeaderboardOptIn);
+// Gamification Routes
+router.get('/points', authenticateToken, gamificationController.getPoints);
+router.get('/earnings', authenticateToken, gamificationController.getRecentEarnings);
+router.get('/badges', authenticateToken, gamificationController.getBadges);
+router.get('/leaderboard', authenticateToken, gamificationController.getLeaderboard);
+router.put('/leaderboard/opt-in', authenticateToken, gamificationController.updateLeaderboardOptIn);
 
 module.exports = router;
