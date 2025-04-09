@@ -15,9 +15,7 @@ This project is built with a **React** frontend and a **Node.js/Express** backen
 ### Frontend
 - **Authentication:**
   - Signup and login with email and password.
-  - Signup with Google OAuth2.
-  - Email verification for email/password signup (users must verify their email before accessing the dashboard).
-- **Pages:**
+  - - **Pages:**
   - **Dashboard:** Overview of tasks, goals, budget, and more.
   - **Tasks & Goals:** Manage tasks and set goals.
   - **Budget Tracker:** Track expenses and income.
@@ -39,14 +37,11 @@ This project is built with a **React** frontend and a **Node.js/Express** backen
 - **API Endpoints:**
   - `/api/auth/signup`: Register a new user with email and password.
   - `/api/auth/login`: Log in with email and password.
-  - `/api/auth/google`: Sign up or log in with Google OAuth2.
-  - `/api/auth/verify-email/:token`: Verify email using a token sent to the user’s email.
+ 
 - **Database:** SQLite3 database (`lifehub.db`) to store user data.
 - **Security:**
   - Passwords are hashed using `bcryptjs`.
   - JWT tokens for authentication.
-  - Email verification for email/password signup.
-- **Email Service:** Uses `nodemailer` to send email verification links.
 
 ---
 
@@ -57,7 +52,7 @@ This project is built with a **React** frontend and a **Node.js/Express** backen
 - **React Router**: For client-side routing.
 - **Tailwind CSS**: For styling the app.
 - **Axios**: For making HTTP requests to the backend.
-- **Google OAuth2**: For Google signup/login.
+-
 
 ### Backend
 - **Node.js/Express**: For building the API.
@@ -65,7 +60,7 @@ This project is built with a **React** frontend and a **Node.js/Express** backen
 - **bcryptjs**: For password hashing.
 - **jsonwebtoken**: For generating JWT tokens.
 - **nodemailer**: For sending email verification emails.
-- **google-auth-library**: For Google OAuth2 authentication.
+- 
 
 ---
 

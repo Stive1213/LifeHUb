@@ -76,10 +76,10 @@ function App() {
           <Route path="/assistant" element={renderProtectedPage(AIPoweredAssistant)} />
           <Route path="/gamification" element={renderProtectedPage(Gamification)} />
           <Route path="/notifications" element={renderProtectedPage(Notifications)} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/Settings" element={<Settings />} />
-          <Route path="/HealthWellness" element={<HealthWellness />} />
-
+          <Route path="/profile" element={renderProtectedPage(Profile)} />
+          <Route path="/HealthWellness" element={renderProtectedPage(HealthWellness)} />
+          <Route path="/Settings" element={renderProtectedPage(Settings)} />
+          
 
 
         </Route>

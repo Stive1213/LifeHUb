@@ -93,20 +93,7 @@ function Profile() {
   return (
     <div className="flex min-h-screen bg-slate-900 text-white">
       {/* Sidebar */}
-      <div className="w-64 bg-slate-800 p-6 flex flex-col space-y-6">
-        <h2 className="text-2xl font-bold">LifeHub</h2>
-        <nav className="space-y-4">
-          <Link to="/profile" className="block p-2 rounded-lg bg-purple-500 hover:bg-purple-600">Profile</Link>
-          <Link to="/tasks" className="block p-2 rounded-lg hover:bg-slate-700">Tasks</Link>
-          <Link to="/goals" className="block p-2 rounded-lg hover:bg-slate-700">Goals</Link>
-          <Link to="/transactions" className="block p-2 rounded-lg hover:bg-slate-700">Budget</Link>
-          <Link to="/events" className="block p-2 rounded-lg hover:bg-slate-700">Events</Link>
-          <Link to="/habits" className="block p-2 rounded-lg hover:bg-slate-700">Habits</Link>
-          <Link to="/journal" className="block p-2 rounded-lg hover:bg-slate-700">Journal</Link>
-          <Link to="/communities" className="block p-2 rounded-lg hover:bg-slate-700">Communities</Link>
-          <Link to="/assistant" className="block p-2 rounded-lg hover:bg-slate-700">Assistant</Link>
-        </nav>
-      </div>
+      
 
       {/* Main Content */}
       <div className="flex-1 p-8">

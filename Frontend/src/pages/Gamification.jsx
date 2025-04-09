@@ -1,36 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 function Gamification() {
-  // Mock data for points
-  const totalPoints = 150;
-  const recentEarnings = [
-    { id: '1', description: '+10 for completing a task', date: '2025-03-29' },
-    { id: '2', description: '+5 for daily login', date: '2025-03-29' },
-    { id: '3', description: '+20 for achieving a goal', date: '2025-03-28' },
-  ];
-
-  // Mock data for badges
-  const badges = [
-    { id: '1', name: 'Budget Boss', icon: '💰' },
-    { id: '2', name: 'Task Master', icon: '✅' },
-    { id: '3', name: 'Habit Hero', icon: '🌟' },
-  ];
-
-  // Mock data for leaderboard
-  const leaderboard = [
-    { id: '1', name: 'Abebe', points: 200 },
-    { id: '2', name: 'Kebede', points: 180 },
-    { id: '3', name: 'You', points: 150 },
-    { id: '4', name: 'Tigist', points: 120 },
-  ];
-
-  // State for leaderboard opt-in (mocked as opted in by default)
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [recentEarnings, setRecentEarnings] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [isOptedIn, setIsOptedIn] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const token = localStorage.getItem('token');
+
+  // Fetch data function
+  const fetchGamificationData = async () => {
+    if (!token) {
+      setError('Please log in to view gamification data');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch points
+      const pointsRes = await axios.get('http://localhost:5000/api/gamification/points', { headers });
+      setTotalPoints(pointsRes.data.totalPoints);
+
+      // Fetch recent earnings
+      const earningsRes = await axios.get('http://localhost:5000/api/gamification/earnings', { headers });
+      setRecentEarnings(earningsRes.data);
+
+      // Fetch badges
+      const badgesRes = await axios.get('http://localhost:5000/api/gamification/badges', { headers });
+      setBadges(badgesRes.data);
+
+      // Fetch leaderboard
+      const leaderboardRes = await axios.get('http://localhost:5000/api/gamification/leaderboard', {
+        headers,
+        params: { optIn: isOptedIn },
+      });
+      setLeaderboard(leaderboardRes.data);
+
+      setError('');
+    } catch (err) {
+      console.error('Error fetching gamification data:', err.response?.data || err.message);
+      setError(err.response?.data?.error || 'Error fetching gamification data');
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch and polling setup
+  useEffect(() => {
+    fetchGamificationData();
+    const interval = setInterval(fetchGamificationData, 10000); // Poll every 10 seconds
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [isOptedIn, token]); // Refetch when opt-in changes
+
+  // Handle leaderboard opt-in toggle
+  const handleOptInChange = async () => {
+    const newOptIn = !isOptedIn;
+    setIsOptedIn(newOptIn);
+    try {
+      await axios.put(
+        'http://localhost:5000/api/gamification/leaderboard/opt-in',
+        { optIn: newOptIn },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchGamificationData(); // Refresh leaderboard immediately
+    } catch (err) {
+      console.error('Error updating opt-in:', err.response?.data || err.message);
+      setError('Failed to update leaderboard preference');
+      setIsOptedIn(!newOptIn); // Revert on error
+    }
+  };
+
+  if (loading) return <div className="text-white">Loading...</div>;
 
   return (
     <div className="text-white">
       {/* Header */}
       <h2 className="text-2xl font-bold mb-6">Gamification Layer</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {/* Points Tracker */}
       <div className="bg-slate-800 p-6 rounded-lg shadow mb-6">
@@ -82,7 +137,7 @@ function Gamification() {
               <input
                 type="checkbox"
                 checked={isOptedIn}
-                onChange={() => setIsOptedIn(!isOptedIn)}
+                onChange={handleOptInChange}
                 className="form-checkbox h-5 w-5 text-purple-500"
               />
               <span>Show my score on the leaderboard</span>
