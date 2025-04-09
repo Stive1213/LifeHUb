@@ -1,48 +1,74 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Added for logout navigation
 
 function Navbar({ toggleSidebar, toggleTheme, theme, isSidebarOpen }) {
   const [totalPoints, setTotalPoints] = useState(0);
-  const [userData, setUserData] = useState({ username: 'User', profileImage: 'https://via.placeholder.com/40' });
+  const [userData, setUserData] = useState({
+    username: 'Guest',
+    profileImage: 'https://via.placeholder.com/40',
+  });
   const [error, setError] = useState('');
+  const navigate = useNavigate(); // For logout redirection
 
   useEffect(() => {
     const fetchUserData = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
-        setError('Please log in to view user data');
+        setError('Please log in to view your profile');
+        setUserData({ username: 'Guest', profileImage: 'https://via.placeholder.com/40' });
+        setTotalPoints(0);
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
       try {
-        const response = await axios.get('http://localhost:5000/api/user', { headers });
-        const { points, username, profileImage } = response.data;
-        setTotalPoints(points || 0);
+        const response = await axios.get('http://localhost:5000/api/auth/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const { totalPoints, username, profileImage } = response.data;
+        const resolvedProfileImage = profileImage.startsWith('http')
+          ? profileImage
+          : `http://localhost:5000${profileImage}`;
+
+        setTotalPoints(totalPoints || 0);
         setUserData({
-          username: username || 'User',
-          profileImage: profileImage || 'https://via.placeholder.com/40',
+          username: username || 'Guest',
+          profileImage: resolvedProfileImage,
         });
         setError(''); // Clear error on success
       } catch (err) {
         console.error('Error fetching user data:', err.response?.data || err.message);
         const errorMessage = err.response?.data?.error || 'Error fetching user data';
         setError(errorMessage);
-        if (errorMessage === 'User not found') {
-          // Handle "User not found" specifically
-          setTotalPoints(0); // Reset to 0 instead of mock 150
+
+        if (err.response?.status === 401 || errorMessage === 'User not found') {
+          // Handle unauthorized or invalid token
+          setTotalPoints(0);
           setUserData({ username: 'Guest', profileImage: 'https://via.placeholder.com/40' });
-          localStorage.removeItem('token'); // Clear invalid token
+          localStorage.removeItem('token');
+          navigate('/login'); // Redirect to login
         } else {
           // Fallback for other errors
-          setTotalPoints(150);
-          setUserData({ username: 'User', profileImage: 'https://via.placeholder.com/40' });
+          setTotalPoints(0); // Avoid mock data; reset to 0
+          setUserData({ username: 'Guest', profileImage: 'https://via.placeholder.com/40' });
         }
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setUserData({ username: 'Guest', profileImage: 'https://via.placeholder.com/40' });
+    setTotalPoints(0);
+    setError('');
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-slate-900 text-white p-4 flex justify-between items-center shadow">
@@ -56,7 +82,7 @@ function Navbar({ toggleSidebar, toggleTheme, theme, isSidebarOpen }) {
         <h1 className="text-xl font-bold">LifeHub</h1>
       </div>
 
-      {/* Right Side: Points Counter, Theme Toggle, and User Profile */}
+      {/* Right Side: Points Counter, Theme Toggle, User Profile, and Logout */}
       <div className="flex items-center space-x-4">
         {/* Points Counter */}
         <div className="bg-purple-500 text-white px-3 py-1 rounded-full">
@@ -77,14 +103,23 @@ function Navbar({ toggleSidebar, toggleTheme, theme, isSidebarOpen }) {
         </button>
 
         {/* User Profile */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 relative group">
           <img
             src={userData.profileImage}
             alt="User profile"
-            className="w-10 h-10 rounded-full"
+            className="w-10 h-10 rounded-full object-cover"
             onError={(e) => (e.target.src = 'https://via.placeholder.com/40')}
           />
           <span>{userData.username}</span>
+          {/* Dropdown for Logout */}
+          <div className="absolute right-0 top-full mt-2 w-32 bg-slate-800 rounded-lg shadow-lg hidden group-hover:block">
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 text-white hover:bg-red-500 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Error Display */}
