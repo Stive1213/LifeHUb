@@ -9,7 +9,15 @@ LifeHub is a full-stack web application designed to help users manage their dail
 This project is built with a **React** frontend and a **Node.js/Express** backend, using **SQLite3** as the database. The app is styled with **Tailwind CSS** for a modern, responsive design.
 
 ---
+## Dashboard
+![Content Image](https://github.com/Stive1213/LifeHUb/blob/main/dashboard.png)
+## Task & goal
+![Content Image](https://github.com/Stive1213/LifeHUb/blob/main/task%20&goal.png) 
 
+
+
+
+---
 ## Features
 
 ### Frontend
@@ -99,15 +107,7 @@ npm install
 ```
 
 #### Set Up Environment Variables
-Create a `.env` file in the `lifehub-backend` directory and add the following:
-```env
-PORT=5000
-JWT_SECRET=your_jwt_secret_key_here
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_email_app_password
-```
+
 
 - **JWT_SECRET**: A random string for signing JWT tokens (e.g., generate with `openssl rand -base64 32`).
 - **GOOGLE_CLIENT_ID** and **GOOGLE_CLIENT_SECRET**: Obtain these from the Google Cloud Console:
