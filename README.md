@@ -4,7 +4,7 @@
 
 ## Overview
 
-LifeHub is a full-stack web application designed to help users manage their daily tasks, goals, budget, habits, and more in one centralized platform. The app provides a user-friendly interface with features like task management, budget tracking, a calendar, habit tracking, journaling, social networking, document storage, and gamification to keep users motivated. It includes user authentication with email/password signup, Google OAuth2 signup, and email verification for added security.
+LifeHub is a full-stack web application designed to help users manage their daily tasks, goals, budget, habits, and more in one centralized platform. The app provides a user-friendly interface with features like task management, budget tracking, a calendar, habit tracking, journaling, social networking, document storage, and gamification to keep users motivated. It includes user authentication with email/password signup.
 
 This project is built with a **React** frontend and a **Node.js/Express** backend, using **SQLite3** as the database. The app is styled with **Tailwind CSS** for a modern, responsive design.
 
@@ -78,8 +78,7 @@ Before setting up the project, ensure you have the following installed:
 - **Node.js** (v14 or higher): [Download Node.js](https://nodejs.org/)
 - **npm**: Comes with Node.js.
 - **Git**: For cloning the repository (optional).
-- A **Google Cloud Project** with OAuth2 credentials for Google signup (see setup below).
-- An email service (e.g., Gmail) for sending verification emails (see setup below).
+
 
 ---
 
@@ -106,23 +105,7 @@ cd lifehub-backend
 npm install
 ```
 
-#### Set Up Environment Variables
 
-
-- **JWT_SECRET**: A random string for signing JWT tokens (e.g., generate with `openssl rand -base64 32`).
-- **GOOGLE_CLIENT_ID** and **GOOGLE_CLIENT_SECRET**: Obtain these from the Google Cloud Console:
-  1. Go to [Google Cloud Console](https://console.cloud.google.com/).
-  2. Create a new project (e.g., "LifeHub").
-  3. Go to **APIs & Services > Credentials**.
-  4. Create an **OAuth 2.0 Client ID** (select "Web application").
-  5. Set the **Authorized JavaScript origins** to `http://localhost:3000`.
-  6. Set the **Authorized redirect URIs** to `http://localhost:5000/api/auth/google/callback`.
-  7. Copy the Client ID and Client Secret to the `.env` file.
-- **EMAIL_USER** and **EMAIL_PASS**: Use a Gmail account for sending emails:
-  1. Go to your Google Account settings.
-  2. Enable **2-Step Verification**.
-  3. Generate an **App Password** (under Security > App Passwords).
-  4. Use your email (e.g., `your_email@gmail.com`) and the app password in the `.env` file.
 
 #### Start the Backend Server
 ```bash
@@ -165,10 +148,7 @@ npm start
 2. **Sign Up or Log In:**
    - **Email/Password Signup:**
      - Click “Sign Up”, enter an email and password, and submit.
-     - Check your email for a verification link (it may go to spam).
-     - Click the link to verify your email, then log in to access the dashboard.
-   - **Google Signup:**
-     - Click the “Sign in with Google” button, select your Google account, and you’ll be redirected to the dashboard.
+     
    - **Login:**
      - If you’ve already signed up and verified your email, enter your email and password to log in.
 
@@ -250,8 +230,7 @@ lifehub-frontend/
       "password": "testpassword123"
     }
     ```
-  - **Google Auth:** `POST http://localhost:5000/api/auth/google` (handled via frontend redirect).
-  - **Verify Email:** `GET http://localhost:5000/api/auth/verify-email/:token` (accessed via email link).
+  
 
 ### Frontend Testing
 - Test in the browser:
